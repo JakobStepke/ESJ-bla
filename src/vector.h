@@ -105,6 +105,14 @@ namespace ASC_bla
         data_[i] = v2(i);
       return *this;
     }
+
+    Vector & operator* (Vector && v2)
+    {
+      Vector ret = Vector(size_);
+      for (size_t i = 0; i < size_; i++)
+        ret(i) = this(i)*v2(i);
+      return ret;
+    }
     
   };
 

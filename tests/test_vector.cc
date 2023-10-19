@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <vector.h>
+#include <matrix.h>
 
 namespace bla = ASC_bla;
 
@@ -10,11 +11,17 @@ int main()
   size_t n = 10;
   bla::Vector<double> x(n), y(n);
 
+  bla::Matrix<double, bla::ORDERING::ColMajor> A(n,n);
+
   for (size_t i = 0; i < x.Size(); i++)
     {
       x(i) = i;
       y(i) = 10;
     }
+
+  for (size_t i = 0; i < A.Size_Rows(); i++)
+    for (size_t j = 0; j < A.Size_Cols(); j++)
+      A(i,j) = i+j;
 
   bla::Vector<double> z = x+y;
   
