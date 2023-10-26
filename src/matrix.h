@@ -142,10 +142,19 @@ namespace ASC_bla
         Matrix(size_t rows, size_t cols) : MatrixView<T, ORD>(rows, cols, &data_), rows_(rows), cols_(cols), data_(rows * cols) {}
 
         // Copy constructor
-        Matrix(const Matrix &other) : rows_(other.rows_), cols_(other.cols_), data_(other.data_) {}
+        Matrix(const Matrix &other) : Matrix (other.rows_, other.cols_)
+        {
+            for (size_t i = 0; i < rows_; ++i)
+            {
+                for (size_t j = 0; j < cols_; ++j)
+                {
+                    (*this)(i, j) = other(i, j);
+                }
+            }
+        }
 
         // Move constructor
-        Matrix(Matrix &&other) noexcept : rows_(other.rows_), cols_(other.cols_), data_(std::move(other.data_)) {}
+        Matrix(Matrix &&other) noexcept : MatrixView<T, ORD>(other.rows_, other.cols_, &other.data_), rows_(other.rows_), cols_(other.cols_), data_(std::move(other.data_)) {}
 
         // Destructor
         ~Matrix() = default;
@@ -168,11 +177,11 @@ namespace ASC_bla
         {
             if constexpr (ORD == ORDERING::ColMajor)
             {
-                return data_[i](j * rows_);
+                return data_(i + j * rows_);
             }
             else
             {
-                return data_[j](i * cols_);
+                return data_(j + i * cols_);
             }
         }
 
@@ -247,15 +256,74 @@ namespace ASC_bla
             }
             return result;
         }
-        // Transpose method
-        Matrix<T, ORD> transpose() const
+
+        Matrix operator*(const T &scal) const
         {
-            Matrix<T, ORD> result(cols_, rows_);
+            Matrix result(rows_, cols_);
+
             for (size_t i = 0; i < rows_; ++i)
             {
                 for (size_t j = 0; j < cols_; ++j)
                 {
-                    result(j, i) = (*this)(i, j);
+                    if constexpr (ORD == ORDERING::ColMajor)
+                    {
+                        result(i, j) = (*this)(i, j) * scal;
+                    }
+                    else
+                    {
+                        result(i, j) = (*this)(i, j) * scal;
+                    }
+                }
+            }
+            return result;
+        }
+
+        // Matrix-Matrix Addition
+        Matrix operator+(const Matrix &other) const
+        {
+            if (rows_ != other.rows_ || cols_ != other.cols_)
+            {
+                // Invalid addition, return an empty matrix or throw an exception
+                return Matrix(0, 0);
+            }
+
+            Matrix result(rows_, cols_);
+
+            for (size_t i = 0; i < rows_; ++i)
+            {
+                for (size_t j = 0; j < cols_; ++j)
+                {
+                    if constexpr (ORD == ORDERING::ColMajor)
+                    {
+                        result(i, j) = (*this)(i, j) + other(i, j);
+                    }
+                    else
+                    {
+                        result(i, j) = (*this)(i, j) + other(i, j);
+                    }
+                }
+            }
+            return result;
+        }
+
+
+        // Transpose method
+        Matrix<T, ORD> transpose() const
+        {
+            Matrix<T, ORD> result(cols_, rows_);
+
+            for (size_t i = 0; i < rows_; ++i)
+            {
+                for (size_t j = 0; j < cols_; ++j)
+                {
+                    if constexpr (ORD == ORDERING::ColMajor)
+                    {
+                        result(j, i) = (*this)(i, j);
+                    }
+                    else
+                    {
+                        result(j, i) = (*this)(i, j);
+                    }
                 }
             }
             return result;
@@ -308,5 +376,50 @@ namespace ASC_bla
         size_t Size_Rows() const { return rows_; }
         size_t Size_Cols() const { return cols_; }
     };
+
+    template <typename T, ORDERING ORD>
+    Vector<T> operator*(const Vector<T> &vector, const Matrix<T, ORD> &matrix)
+    {
+        if constexpr (ORD == ORDERING::ColMajor)
+        {
+            if (matrix.Size_Rows() != vector.Size())
+            {
+                // Invalid multiplication, return an empty vector or throw an exception
+                return Vector<T>(0);
+            }
+
+            Vector<T> result(matrix.Size_Cols());
+            for (size_t j = 0; j < matrix.Size_Cols(); ++j)
+            {
+                T sum = 0;
+                for (size_t i = 0; i < matrix.Size_Rows(); ++i)
+                {
+                    sum += matrix(i, j) * vector(i);
+                }
+                result(j) = sum;
+            }
+            return result;
+        }
+        else
+        {
+            if (matrix.Size_Cols() != vector.Size())
+            {
+                // Invalid multiplication, return an empty vector or throw an exception
+                return Vector<T>(0);
+            }
+
+            Vector<T> result(matrix.Size_Rows());
+            for (size_t i = 0; i < matrix.Size_Rows(); ++i)
+            {
+                T sum = 0;
+                for (size_t j = 0; j < matrix.Size_Cols(); ++j)
+                {
+                    sum += matrix(i, j) * vector(j);
+                }
+                result(i) = sum;
+            }
+            return result;
+        }
+    }
 }
 #endif

@@ -11,6 +11,7 @@ int main()
   bla::Vector<double> x(n), y(n);
 
   bla::Matrix<double, bla::ORDERING::ColMajor> A(n, n);
+  bla::Matrix<double, bla::ORDERING::ColMajor> B(n, n);
 
   for (size_t i = 0; i < x.Size(); i++)
   {
@@ -22,7 +23,20 @@ int main()
     for (size_t j = 0; j < A.Size_Cols(); j++)
       A(i, j) = i + j;
 
+  for (size_t i = 0; i < B.Size_Rows(); i++)
+    for (size_t j = 0; j < B.Size_Cols(); j++)
+      B(i, j) = 2*i + j;
+
   bla::Vector<double> z = x + y;
+
+  bla::Matrix<double, bla::ORDERING::ColMajor> C = A*B;
+  bla::Matrix<double, bla::ORDERING::ColMajor> D = A*B + A*B;
+
+  std::cout << "C = " << C << std::endl;
+  std::cout << "D = " << D << std::endl;
+
+  std::cout << "A*x = " << A*x << std::endl;
+  std::cout << "y*A = " << y*A << std::endl;
 
   std::cout << "x+y = " << z << std::endl;
 
