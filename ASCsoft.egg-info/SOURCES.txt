@@ -8,6 +8,8 @@ ASCsoft.egg-info/SOURCES.txt
 ASCsoft.egg-info/dependency_links.txt
 ASCsoft.egg-info/not-zip-safe
 ASCsoft.egg-info/top_level.txt
+_skbuild/linux-x86_64-3.10/cmake-install/ASCsoft/__init__.py
+_skbuild/linux-x86_64-3.10/cmake-install/ASCsoft/bla.cpython-310-x86_64-linux-gnu.so
+_skbuild/linux-x86_64-3.10/cmake-install/ASCsoft/include/vector.h
 _skbuild/linux-x86_64-3.9/cmake-install/ASCsoft/__init__.py
-_skbuild/linux-x86_64-3.9/cmake-install/ASCsoft/bla.cpython-39-x86_64-linux-gnu.so
 _skbuild/linux-x86_64-3.9/cmake-install/ASCsoft/include/vector.h
