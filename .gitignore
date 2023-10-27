@@ -42,7 +42,6 @@
 
 include/divisible/*
 
-
 ## Local 
 
 .idea/*.xml
@@ -53,3 +52,9 @@ include/*
 lib/*
 bin/*
 test/test_runner
+
+# CMake project generating python bindings in linux
+*.so
+
+# Log files
+_skbuild/*
