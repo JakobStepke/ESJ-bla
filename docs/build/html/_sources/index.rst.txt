@@ -78,9 +78,65 @@ You can extract a rows or a columns from a matrix:
 
    Vector col1 = product.Col(1);
 
+You can perform different operations with matrices. As an example, we declare and output some vectors and matrices:
 
-some changes ...  
+.. code-block:: cpp
 
+  size_t n = 3;
+  bla::Vector<double> x(n), y(n);
+
+  bla::Matrix<double, bla::ORDERING::ColMajor> A(n, n);
+  bla::Matrix<double, bla::ORDERING::ColMajor> B(n, n);
+
+  for (size_t i = 0; i < x.Size(); i++)
+  {
+    x(i) = i;
+    y(i) = 10;
+  }
+
+  for (size_t i = 0; i < A.Size_Rows(); i++)
+    for (size_t j = 0; j < A.Size_Cols(); j++)
+      A(i, j) = i + j;
+
+  for (size_t i = 0; i < B.Size_Rows(); i++)
+    for (size_t j = 0; j < B.Size_Cols(); j++)
+      B(i, j) = 2*i + j;
+
+  std::cout << "A:" << std::endl << A << std::endl;
+  std::cout << "B:" << std::endl << B << std::endl;
+  std::cout << "x:" << std::endl << x << std::endl;
+  std::cout << "y:" << std::endl << y << std::endl;
+
+This will result in the following output:
+
+.. code-block::
+
+  A:
+  0 1 2
+  1 2 3
+  2 3 4
+  B:
+  0 1 2
+  2 3 4
+  4 5 6
+  x:
+  0, 1, 2
+  y:
+  10, 10, 10
+
+You can multiply two matrices:
+
+.. code-block:: cpp
+
+  bla::Matrix<double, bla::ORDERING::ColMajor> C = A*B;
+  std::cout << "C: " << std::endl << C << std::endl;
+
+.. code-block::
+
+  C:
+  10 13 16
+  16 22 28
+  22 31 40
    
 .. toctree::
    :maxdepth: 2
