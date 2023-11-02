@@ -111,32 +111,122 @@ This will result in the following output:
 
 .. code-block::
 
-  A:
-  0 1 2
-  1 2 3
-  2 3 4
-  B:
-  0 1 2
-  2 3 4
-  4 5 6
-  x:
-  0, 1, 2
-  y:
-  10, 10, 10
+  > A:
+  > 0 1 2
+  > 1 2 3
+  > 2 3 4
+  > B:
+  > 0 1 2
+  > 2 3 4
+  > 4 5 6
+  > x:
+  > 0, 1, 2
+  > y:
+  > 10, 10, 10
+
+You can add two matrices:
+
+.. code-block:: cpp
+
+  bla::Matrix<double, bla::ORDERING::ColMajor> C = A+B;
+  std::cout << "C: " << std::endl << C << std::endl;
+
+.. code-block::
+  
+  > C: 
+  > 0 2 4
+  > 3 5 7
+  > 6 8 10
 
 You can multiply two matrices:
 
 .. code-block:: cpp
 
-  bla::Matrix<double, bla::ORDERING::ColMajor> C = A*B;
-  std::cout << "C: " << std::endl << C << std::endl;
+  bla::Matrix<double, bla::ORDERING::ColMajor> D = A*B;
+  std::cout << "D: " << std::endl << D << std::endl;
 
 .. code-block::
 
-  C:
-  10 13 16
-  16 22 28
-  22 31 40
+  > D:
+  > 10 13 16
+  > 16 22 28
+  > 22 31 40
+
+You can multiplay a matrix with a vector from both sides:
+
+.. code-block:: cpp
+
+  std::cout << "A*x:" << std::endl << A*x << std::endl;
+  std::cout << "y*A:" << std::endl << y*A << std::endl;
+
+.. code-block::
+
+  > A*x:
+  > 5, 8, 11
+  > y*A:
+  > 30, 60, 90
+
+You can transpose a matrix:
+
+.. code-block:: cpp
+
+  std::cout << B.transpose() << std::endl;
+
+.. code-block::
+
+  > 0 2 4
+  > 1 3 5
+  > 2 4 6
+
+You can set the values of a range of entries in a vector:
+
+.. code-block:: cpp
+
+  bla::Vector<double> v(10);
+  for (size_t i = 0; i < x.Size(); i++)
+  {
+      v(i) = i;
+  }
+
+  std::cout << "v = " << v << std::endl;
+  v.Range(2, 9) = 3;
+  std::cout << "v = " << v << std::endl;
+
+.. code-block::
+
+  > v = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+  > v = 0, 1, 3, 3, 3, 3, 3, 3, 3, 9
+
+You can set e.g. the value of every fifth entry starting from the first entry:
+
+.. code-block:: cpp
+
+  v.Slice(1, 5) = 10;
+  std::cout << "v = " << v << std::endl;
+
+.. code-block::
+
+  > v = 0, 10, 3, 3, 3, 3, 10, 3, 3, 9
+
+You can get the size of a vector:
+
+.. code-block:: cpp
+
+  std::cout << "Size of v: " << v.Size() << std::endl;
+
+.. code-block::
+
+  > Size of v: 10
+
+Similarly, you can get the number of rows or columns of a matrix:
+
+.. code-block:: cpp
+
+  std::cout << "Number of columns in A: " << A.Size_Cols() << std::endl;
+
+.. code-block::
+
+  > Number of columns in A: 3
    
 .. toctree::
    :maxdepth: 2
