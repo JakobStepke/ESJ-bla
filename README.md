@@ -1,7 +1,7 @@
 # ASC-bla
 A simple basic linear algebra implementation using modern C++.
 
-[![RTD](https://readthedocs.org/projects/asc-bla/badge/?version=latest)](https://asc-bla.readthedocs.io/en/latest/?badge=latest)
+[![RTD](https://readthedocs.org/projects/esj-bla/badge/?version=latest)](https://esj-bla.readthedocs.io/en/latest/?badge=latest)
 
 
 telling the truth: ASC-bla is not really a complete library,
