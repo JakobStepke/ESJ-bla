@@ -11,6 +11,7 @@ namespace ASC_bla
 
 
  
+   
   template <typename T, typename TDIST = std::integral_constant<size_t,1> >
   class VectorView : public VecExpr<VectorView<T,TDIST>>
   {
@@ -42,6 +43,7 @@ namespace ASC_bla
     
     auto View() const { return VectorView(size_, dist_, data_); }
     size_t Size() const { return size_; }
+    auto Dist() const { return dist_; }    
     T & operator()(size_t i) { return data_[dist_*i]; }
     const T & operator()(size_t i) const { return data_[dist_*i]; }
     
