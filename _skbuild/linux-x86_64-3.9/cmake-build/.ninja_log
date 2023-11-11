@@ -1,0 +1,6 @@
+# ninja log v5
+105	3188	1697723861576800200	CMakeFiles/test_vector.dir/tests/test_vector.cc.o	8ab5cd639bd3ff63
+3555	6355	1697723864790881800	test_vector	ccba7a8bf183a170
+121	17279	1697723875713744300	CMakeFiles/bla.dir/src/bind_bla.cpp.o	5f9dab708648279c
+17467	24847	1697723883307379500	bla.cpython-39-x86_64-linux-gnu.so	629cb492da610387
+24850	25275	0	CMakeFiles/install.util	7037c41299c49d8a

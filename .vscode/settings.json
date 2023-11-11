@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "MLTable": "yaml",
+        "complex": "cpp",
+        "ostream": "cpp"
+    }
+}
