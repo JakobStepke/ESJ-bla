@@ -31,9 +31,14 @@ int main()
 
   bla::Matrix<double, bla::ORDERING::ColMajor> C = A*B;
   bla::Matrix<double, bla::ORDERING::ColMajor> D = A*B + A*B;
+  bla::Matrix<double, bla::ORDERING::ColMajor> E = A.Inverse();
+  bla::Matrix<double, bla::ORDERING::ColMajor> I = A*E;
+
 
   std::cout << "C = " << C << std::endl;
   std::cout << "D = " << D << std::endl;
+  std::cout << "E = " << E << std::endl;
+  std::cout << "I = " << I << std::endl;
 
   std::cout << "A*x = " << A*x << std::endl;
   std::cout << "y*A = " << y*A << std::endl;

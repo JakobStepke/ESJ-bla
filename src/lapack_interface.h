@@ -6,7 +6,6 @@
 
 #include "vector.h"
 #include "matrix.h"
-#include "clapack.h"
 
 
 

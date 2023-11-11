@@ -59,9 +59,6 @@ namespace ASC_bla
       
   };
   
-  
-
-  
   template <typename T>
   class Vector : public VectorView<T>
   {
