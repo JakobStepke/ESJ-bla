@@ -23,6 +23,9 @@ find_package(LAPACK REQUIRED)
 add_executable (test_lapack tests/test_lapack.cc)
 target_link_libraries (test_lapack PUBLIC ${LAPACK_LIBRARIES})
 
+add_executable (speed_test tests/speed_test.cc)
+target_sources (speed_test PUBLIC src/vector.h src/expression.h)
+target_link_libraries (speed_test PUBLIC ${LAPACK_LIBRARIES})
 
 pybind11_add_module(bla src/bind_bla.cpp)
 

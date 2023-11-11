@@ -5,6 +5,8 @@
 #include <string>
 
 #include "vector.h"
+#include "matrix.h"
+#include "clapack.h"
 
 
 
@@ -64,19 +66,19 @@ namespace ASC_bla
   // doublereal *b, integer *ldb, doublereal *beta, doublereal *c__, 
   // integer *ldc);
 
-  /*  
+    
   // c = a*b
   template <ORDERING OA, ORDERING OB>
   void MultMatMatLapack (MatrixView<double, OA> a,
                          MatrixView<double, OB> b,
-                         MatrixView<double, ColMajor> c)
+                         MatrixView<double, ORDERING::ColMajor> c)
   {
-    char transa_ = (OA == ColMajor) ? 'N' : 'T';
-    char transb_ = (OB == ColMajor) ? 'N' : 'T'; 
+    char transa_ = (OA == ORDERING::ColMajor) ? 'N' : 'T';
+    char transb_ = (OB == ORDERING::ColMajor) ? 'N' : 'T'; 
   
-    integer n = c.Height();
-    integer m = c.Width();
-    integer k = a.Width();
+    integer n = c.Size_Rows();
+    integer m = c.Size_Cols();
+    integer k = a.Size_Cols();
   
     double alpha = 1.0;
     double beta = 0;
@@ -95,11 +97,11 @@ namespace ASC_bla
   template <ORDERING OA, ORDERING OB>
   int MultMatMatLapack (MatrixView<double, OA> a,
                         MatrixView<double, OB> b,
-                        MatrixView<double, RowMajor> c)
+                        MatrixView<double, ORDERING::RowMajor> c)
   {
-    MultMatMatLapack (Trans(b), Trans(a), Trans(c));
+    return MultMatMatLapack (b.Transpose(), a.Transpose(), c.Transpose());
   }
-  */
+  
 
   
 
