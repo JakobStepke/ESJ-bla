@@ -2,6 +2,7 @@
 #define FILE_VECTOR_H
 
 #include <iostream>
+#include <cmath>
 
 #include "expression.h"
 #include "simd.h"
@@ -14,7 +15,7 @@ namespace ASC_bla
 
  
    
-  template <typename T, typename TDIST = std::integral_constant<size_t,1> >
+  template <typename T = double, typename TDIST = std::integral_constant<size_t,1> >
   class VectorView : public VecExpr<VectorView<T,TDIST>>
   {
   protected:
@@ -42,6 +43,48 @@ namespace ASC_bla
         data_[dist_*i] = scal;
       return *this;
     }
+
+    VectorView & operator+= (T scal)
+    {
+      for (size_t i = 0; i < size_; i++)
+        data_[dist_*i] += scal;
+      return *this;
+    }
+
+    VectorView & operator-= (T scal)
+    {
+      for (size_t i = 0; i < size_; i++)
+        data_[dist_*i] -= scal;
+      return *this;
+    }
+
+    VectorView & operator+= (const VectorView & v2)
+    {
+      for (size_t i = 0; i < size_; i++)
+        data_[dist_*i] += v2(i);
+      return *this;
+    }
+
+    VectorView & operator-= (const VectorView & v2)
+    {
+      for (size_t i = 0; i < size_; i++)
+        data_[dist_*i] -= v2(i);
+      return *this;
+    }
+
+    VectorView & operator*= (T scal)
+    {
+      for (size_t i = 0; i < size_; i++)
+        data_[dist_*i] *= scal;
+      return *this;
+    }
+
+    VectorView & operator/= (T scal)
+    {
+      for (size_t i = 0; i < size_; i++)
+        data_[dist_*i] /= scal;
+      return *this;
+    }
     
     auto View() const { return VectorView(size_, dist_, data_); }
     size_t Size() const { return size_; }
@@ -58,10 +101,17 @@ namespace ASC_bla
     auto Slice(size_t first, size_t slice) const {
       return VectorView<T,size_t> (size_/slice, dist_*slice, data_+first*dist_);
     }
+
+    auto Norm2() const {
+      double sum = 0;
+      for (size_t i = 0; i < size_; i++)
+        sum += data_[dist_*i]*data_[dist_*i];
+      return sqrt(sum);
+    }
       
   };
   
-  template <typename T>
+  template <typename T = double>
   class Vector : public VectorView<T>
   {
     typedef VectorView<T> BASE;
@@ -70,6 +120,13 @@ namespace ASC_bla
   public:
     Vector (size_t size) 
       : VectorView<T> (size, new T[size]) { ; }
+      // Vector from list
+
+      Vector (std::initializer_list<T> list)
+      : VectorView<T> (list.size(), new T[list.size()]) {
+        size_t i = 0;
+        for (auto it = list.begin(); it != list.end(); ++it)
+          data_[i++] = *it;}
     
     Vector (const Vector & v)
       : Vector(v.Size())

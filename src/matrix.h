@@ -15,7 +15,7 @@ using namespace ASC_HPC;
 namespace ASC_bla
 {
 
-    template <typename T, ORDERING ORD>
+    template <typename T = double, ORDERING ORD = ORDERING::ColMajor>
     class MatrixView : public MatExpr<MatrixView<T, ORD>, ORD>
     {
     protected:
@@ -28,8 +28,12 @@ namespace ASC_bla
         MatrixView(size_t rows, size_t cols, T *data)
             : rows_(rows), cols_(cols), data_(data)
             , dist_((ORD == ORDERING::ColMajor) ? rows : cols)
-            {
-         }
+            {}
+
+        MatrixView(size_t rows, size_t cols)
+            : rows_(rows), cols_(cols), data_(new T[rows*cols])
+            , dist_((ORD == ORDERING::ColMajor) ? rows : cols)
+            {}
 
         template <typename TB, ORDERING ORDB>
         MatrixView &operator=(const MatExpr<TB, ORDB> &m2)
@@ -98,9 +102,7 @@ namespace ASC_bla
         {
             if constexpr (ORD == ORDERING::ColMajor)
             {
-                auto data_tmp = data_ + i * cols_;
-
-                return VectorView(cols_, 1, data_tmp);
+                return VectorView(cols_, 1, data_ + i * cols_);
             }
             else
             {
@@ -144,91 +146,56 @@ namespace ASC_bla
             }
         }
 
+        auto Diag() const
+        {
+            return VectorView<T, size_t>(std::min(rows_, cols_), dist_ + 1, data_);
+        }
+
         auto Size() const
         {
             return rows_ * cols_;
         }
-    };
 
-    template <typename T, ORDERING ORD>
-    class Matrix : public MatrixView<T, ORD>
-    {
-
-        using MatrixView<T, ORD>::rows_;
-        using MatrixView<T, ORD>::cols_;
-        using MatrixView<T, ORD>::data_;
-        using MatrixView<T, ORD>::dist_;
-        using MatrixView<T, ORD>::Size;
-        using MatrixView<T, ORD>::Row;
-        using MatrixView<T, ORD>::Col;
-
-     public:
-        using MatrixView<T, ORD>::operator();
-
-
-    public:
-        // Constructors
-        Matrix(size_t rows, size_t cols) : MatrixView<T, ORD>(rows, cols, new T[rows*cols]) {}
-
-        // Copy constructor
-        Matrix(const Matrix &other) : Matrix (other.rows_, other.cols_)
+        auto operator*=(const T &scal)
         {
             for (size_t i = 0; i < rows_; ++i)
             {
                 for (size_t j = 0; j < cols_; ++j)
                 {
-                    (*this)(i, j) = other(i, j);
+                    if constexpr (ORD == ORDERING::ColMajor)
+                    {
+                        (*this)(i, j) *= scal;
+                    }
+                    else
+                    {
+                        (*this)(i, j) *= scal;
+                    }
                 }
-            }
-        }
-
-        // Move constructor
-        Matrix(Matrix &&other) noexcept : MatrixView<T, ORD>(other.rows_, other.cols_, other.data_) {}
-
-        // Destructor
-        ~Matrix() = default;
-
-        // Assignment operator
-        Matrix &operator=(const Matrix &other)
-        {
-            if (this != &other)
-            {
-                rows_ = other.rows_;
-                cols_ = other.cols_;
-                data_ = other.data_;
             }
             return *this;
         }
 
-        // Output stream operator for easy printing
-        friend std::ostream &operator<<(std::ostream &os, const Matrix &matrix)
+        auto operator/=(const T &scal)
         {
-            for (size_t i = 0; i < matrix.rows_; ++i)
+            for (size_t i = 0; i < rows_; ++i)
             {
-                if (i > 0)
+                for (size_t j = 0; j < cols_; ++j)
                 {
-                    os << "\n";
-                }
-                for (size_t j = 0; j < matrix.cols_; ++j)
-                {
-                    if (j > 0)
-                    {
-                        os << " ";
-                    }
                     if constexpr (ORD == ORDERING::ColMajor)
                     {
-                        os << matrix.Data()[i + j * matrix.rows_];
+                        (*this)(i, j) /= scal;
                     }
                     else
                     {
-                        os << matrix.Data()[j + i * matrix.cols_];
+                        (*this)(i, j) /= scal;
                     }
                 }
             }
-            return os;
+            return *this;
         }
-        // Matrix-Matrix Multiplication
-        Matrix operator*(const Matrix &other) const
+
+                // Matrix-Matrix Multiplication
+        auto operator*(const MatrixView &other) const
         {
             if (Size() != other.Size())
             {
@@ -236,7 +203,7 @@ namespace ASC_bla
                 throw std::invalid_argument("Invalid multiplication");
             }
 
-            Matrix result(rows_, other.cols_);
+            MatrixView result(rows_, other.cols_);
 
             for (size_t i = 0; i < rows_; ++i)
             {
@@ -279,9 +246,9 @@ namespace ASC_bla
             return result;
         }
 
-        Matrix operator*(const T &scal) const
+        auto operator*(const T &scal) const
         {
-            Matrix result(rows_, cols_);
+            MatrixView result(rows_, cols_);
 
             for (size_t i = 0; i < rows_; ++i)
             {
@@ -301,7 +268,7 @@ namespace ASC_bla
         }
 
         // Matrix-Matrix Addition
-        Matrix operator+(const Matrix &other) const
+        auto operator+(const MatrixView &other) const
         {
             if (rows_ != other.rows_ || cols_ != other.cols_)
             {
@@ -309,7 +276,7 @@ namespace ASC_bla
                 throw std::invalid_argument("Invalid addition");
             }
 
-            Matrix result(rows_, cols_);
+            MatrixView result(rows_, cols_);
 
             for (size_t i = 0; i < rows_; ++i)
             {
@@ -330,9 +297,9 @@ namespace ASC_bla
 
 
         // Transpose method
-        Matrix<T, ORD> transpose() const
+        auto transpose() const
         {
-            Matrix<T, ORD> result(cols_, rows_);
+            MatrixView result(cols_, rows_);
 
             for (size_t i = 0; i < rows_; ++i)
             {
@@ -395,7 +362,7 @@ namespace ASC_bla
             }
         }
 
-        Matrix operator-(const Matrix &other) const
+        auto operator-(const MatrixView &other) const
         {
             if (rows_ != other.rows_ || cols_ != other.cols_)
             {
@@ -403,7 +370,7 @@ namespace ASC_bla
                 throw std::invalid_argument("Invalid addition");
             }
 
-            Matrix result(rows_, cols_);
+            MatrixView result(rows_, cols_);
 
             for (size_t i = 0; i < rows_; ++i)
             {
@@ -422,9 +389,9 @@ namespace ASC_bla
             return result;
         }
 
-        Matrix operator/(const T &scal) const
+        auto operator/(const T &scal) const
         {
-            Matrix result(rows_, cols_);
+            MatrixView result(rows_, cols_);
 
             for (size_t i = 0; i < rows_; ++i)
             {
@@ -443,9 +410,9 @@ namespace ASC_bla
             return result;
         }
 
-        Matrix operator-() const
+        auto operator-() const
         {
-            Matrix result(rows_, cols_);
+            MatrixView result(rows_, cols_);
 
             for (size_t i = 0; i < rows_; ++i)
             {
@@ -464,7 +431,7 @@ namespace ASC_bla
             return result;
         }
 
-        Matrix operator+=(const Matrix &other)
+        auto operator+=(const MatrixView &other)
         {
             if (rows_ != other.rows_ || cols_ != other.cols_)
             {
@@ -489,7 +456,7 @@ namespace ASC_bla
             return *this;
         }
 
-        Matrix operator-=(const Matrix &other)
+        auto operator-=(const MatrixView &other)
         {
             if (rows_ != other.rows_ || cols_ != other.cols_)
             {
@@ -514,45 +481,9 @@ namespace ASC_bla
             return *this;
         }
 
-        Matrix operator*=(const T &scal)
-        {
-            for (size_t i = 0; i < rows_; ++i)
-            {
-                for (size_t j = 0; j < cols_; ++j)
-                {
-                    if constexpr (ORD == ORDERING::ColMajor)
-                    {
-                        (*this)(i, j) *= scal;
-                    }
-                    else
-                    {
-                        (*this)(i, j) *= scal;
-                    }
-                }
-            }
-            return *this;
-        }
 
-        Matrix operator/=(const T &scal)
-        {
-            for (size_t i = 0; i < rows_; ++i)
-            {
-                for (size_t j = 0; j < cols_; ++j)
-                {
-                    if constexpr (ORD == ORDERING::ColMajor)
-                    {
-                        (*this)(i, j) /= scal;
-                    }
-                    else
-                    {
-                        (*this)(i, j) /= scal;
-                    }
-                }
-            }
-            return *this;
-        }
 
-        Matrix operator*=(const Matrix &other)
+        auto operator*=(const MatrixView &other)
         {
             if (Size() != other.Size())
             {
@@ -560,7 +491,7 @@ namespace ASC_bla
                 throw std::invalid_argument("Invalid multiplication");
             }
 
-            Matrix result(rows_, other.cols_);
+            MatrixView result(rows_, other.cols_);
 
             for (size_t i = 0; i < rows_; ++i)
             {
@@ -584,7 +515,89 @@ namespace ASC_bla
             *this = result;
             return *this;
         }
+    };
 
+    template <typename T = double, ORDERING ORD = ORDERING::ColMajor>
+    class Matrix : public MatrixView<T, ORD>
+    {
+
+        using MatrixView<T, ORD>::rows_;
+        using MatrixView<T, ORD>::cols_;
+        using MatrixView<T, ORD>::data_;
+        using MatrixView<T, ORD>::dist_;
+        using MatrixView<T, ORD>::Size;
+        using MatrixView<T, ORD>::Row;
+        using MatrixView<T, ORD>::Col;
+
+     public:
+        using MatrixView<T, ORD>::operator();
+
+
+    public:
+        // Constructors
+        Matrix(size_t rows, size_t cols) : MatrixView<T, ORD>(rows, cols, new T[rows*cols]) {}
+        Matrix(const MatrixView<T, ORD> &other) : MatrixView<T, ORD>(other.Size_Rows(), other.Size_Cols(), other.Data()) {}
+
+        // Copy constructor
+        Matrix(const Matrix &other) : Matrix (other.rows_, other.cols_)
+        {
+            for (size_t i = 0; i < rows_; ++i)
+            {
+                for (size_t j = 0; j < cols_; ++j)
+                {
+                    (*this)(i, j) = other(i, j);
+                }
+            }
+        }
+
+        // Move constructor
+        Matrix(Matrix &&other) noexcept : MatrixView<T, ORD>(other.rows_, other.cols_, other.data_) {}
+
+        // Destructor
+        ~Matrix() = default;
+
+        // Assignment operator
+        Matrix &operator=(const Matrix &other)
+        {
+            if (this != &other)
+            {
+                rows_ = other.rows_;
+                cols_ = other.cols_;
+                data_ = other.data_;
+            }
+            return *this;
+        }
+
+        // Output stream operator for easy printing
+        friend std::ostream &operator<<(std::ostream &os, const Matrix &matrix)
+        {
+            for (size_t i = 0; i < matrix.rows_; ++i)
+            {
+                if (i > 0)
+                {
+                    os << "\n";
+                }
+                for (size_t j = 0; j < matrix.cols_; ++j)
+                {
+                    if (j > 0)
+                    {
+                        os << " ";
+                    }
+                    if constexpr (ORD == ORDERING::ColMajor)
+                    {
+                        os << matrix.Data()[i + j * matrix.rows_];
+                    }
+                    else
+                    {
+                        os << matrix.Data()[j + i * matrix.cols_];
+                    }
+                }
+            }
+            return os;
+        }
+
+
+        [[deprecated("This does not work as intended")]]
         T Determinant() const
         {
             if (rows_ != cols_)

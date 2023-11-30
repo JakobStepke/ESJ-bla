@@ -101,6 +101,29 @@ namespace ASC_bla
     return MultMatMatLapack (b.Transpose(), a.Transpose(), c.Transpose());
   }
   
+  template <ORDERING OA>
+  MatrixView<double, OA> InverseLapack (MatrixView<double, OA> a)
+  {
+    MatrixView<double, ORDERING::ColMajor> a_cm = a;
+
+    int n = a_cm.Size_Cols();
+    int lda = a_cm.Dist();
+    int info;
+    int *IPIV = new int[n];
+    int lwork = n*n;
+    double *WORK = new double[lwork];
+
+    dgetrf_(&n, &n, a_cm.Data(), &lda, IPIV, &info);
+    if (info != 0)
+      throw std::runtime_error(std::string("dgetrf returned errcode "+std::to_string(info)));
+
+    dgetri_(&n, a_cm.Data(), &lda, IPIV, WORK, &lwork, &info);
+    if (info != 0)
+      throw std::runtime_error(std::string("dgetri returned errcode "+std::to_string(info)));
+    
+    
+    return a_cm;
+  }
 
   
 
