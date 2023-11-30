@@ -32,6 +32,7 @@ int main()
             for (size_t j = 0; j < B.Size_Cols(); j++)
                 B(i, j) = 2 * i + j;
 
+        cout << "Starting run\n";
         auto start = std::chrono::high_resolution_clock::now();
         for (size_t i = 0; i < runs; i++)
         {

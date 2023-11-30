@@ -8,6 +8,10 @@
 #include "vector.h"
 #include "ordering.h"
 
+#include "simd.h"
+
+using namespace ASC_HPC;
+
 namespace ASC_bla
 {
 
@@ -90,7 +94,7 @@ namespace ASC_bla
             return data_;
         }
 
-        auto Row(size_t i)
+        auto Row(size_t i) const
         {
             if constexpr (ORD == ORDERING::ColMajor)
             {
@@ -100,19 +104,19 @@ namespace ASC_bla
             }
             else
             {
-                return Transpose(this).Row(i);
+                return Transpose().Row(i);
             }
         }
 
-        auto Col(size_t i)
+        auto Col(size_t i) const
         {
             if constexpr (ORD == ORDERING::ColMajor)
             {
-                return this.Row(i);
+                return Row(i);
             }
             else
             {
-                return Transpose(this).Col(i);
+                return Transpose().Col(i);
             }
         }
 
@@ -155,6 +159,8 @@ namespace ASC_bla
         using MatrixView<T, ORD>::data_;
         using MatrixView<T, ORD>::dist_;
         using MatrixView<T, ORD>::Size;
+        using MatrixView<T, ORD>::Row;
+        using MatrixView<T, ORD>::Col;
 
      public:
         using MatrixView<T, ORD>::operator();
@@ -236,19 +242,39 @@ namespace ASC_bla
             {
                 for (size_t j = 0; j < other.cols_; ++j)
                 {
-                    T sum = 0;
-                    for (size_t k = 0; k < cols_; ++k)
+                    const int dy = 1;
+                    const size_t SW = 16;
+
+                    if constexpr (std::is_same<double, T>::value)
                     {
-                        if constexpr (ORD == ORDERING::ColMajor)
+                        /*
+                        for (size_t k = 0; k < cols_; ++k)
                         {
-                            sum += (*this)(i, k) * other(k, j);
-                        }
-                        else
-                        {
-                            sum += (*this)(i, k) * other(k, j);
-                        }
+                            sum = FMA(SIMD<double,SW>(px[k]), SIMD<double,SW>(py+k*dy), sum);
+                        }*/
+
+                        auto row = std::remove_const_t<decltype(Row(0))>(Col(i));
+                        auto col = std::remove_const_t<decltype(Col(0))>(other.Col(j));
+
+                        
+
+                        result(i, j) = InnerProduct<SW>(cols_, row, 1, col, 1);
                     }
-                    result(i, j) = sum;
+                    else{
+                        T sum = 0;
+                        for (size_t k = 0; k < cols_; ++k)
+                        {
+                            if constexpr (ORD == ORDERING::ColMajor)
+                            {
+                                sum += (*this)(i, k) * other(k, j);
+                            }
+                            else
+                            {
+                                sum += (*this)(i, k) * other(k, j);
+                            }
+                        }
+                        result(i, j) = sum;
+                    }
                 }
             }
             return result;

@@ -4,7 +4,9 @@
 #include <iostream>
 
 #include "expression.h"
+#include "simd.h"
 
+using namespace ASC_HPC;
 
 namespace ASC_bla
 {
@@ -127,6 +129,27 @@ namespace ASC_bla
       ost << ", " << v(i);
     return ost;
   }
+
+  template <size_t SW>
+auto InnerProduct (size_t n, const VectorView<double, int> x, size_t dx,
+                   const VectorView<double, int> y, size_t dy)
+{
+  SIMD<double,SW> sum{0.0};
+  for (size_t i = 0; i < n; i++)
+    {
+      // sum += px[i] * SIMD<double,SW>(py+i*dy);
+      sum = FMA(SIMD<double,SW>(x.Data()[i]), SIMD<double,SW>(y.Data()[i*dy]), sum);
+    }
+    /*
+    std::cout << "sum = " << sum << std::endl;
+    std::cout << "x = " << x << std::endl;
+    std::cout << "y = " << y << std::endl;
+    */
+
+  double first_val = sum.GetFirst();
+
+  return first_val;
+}
   
 }
 
