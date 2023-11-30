@@ -240,6 +240,7 @@ namespace ASC_bla
 
             for (size_t i = 0; i < rows_; ++i)
             {
+                auto row = std::remove_const_t<decltype(Row(0))>(Col(i));
                 for (size_t j = 0; j < other.cols_; ++j)
                 {
                     const int dy = 1;
@@ -252,8 +253,6 @@ namespace ASC_bla
                         {
                             sum = FMA(SIMD<double,SW>(px[k]), SIMD<double,SW>(py+k*dy), sum);
                         }*/
-
-                        auto row = std::remove_const_t<decltype(Row(0))>(Col(i));
                         auto col = std::remove_const_t<decltype(Col(0))>(other.Col(j));
 
                         
