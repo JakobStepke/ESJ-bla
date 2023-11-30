@@ -4,8 +4,13 @@
 #include <iostream>
 
 #include "expression.h"
+
 #include "vector.h"
 #include "ordering.h"
+
+#include "simd.h"
+
+using namespace ASC_HPC;
 
 namespace ASC_bla
 {
@@ -16,11 +21,15 @@ namespace ASC_bla
     protected:
         size_t rows_;
         size_t cols_;
-        Vector<T> *data_;
+        size_t dist_;
+        T *data_;
 
     public:
-        MatrixView(size_t rows, size_t cols, Vector<T> *data)
-            : rows_(rows), cols_(cols), data_(data) {}
+        MatrixView(size_t rows, size_t cols, T *data)
+            : rows_(rows), cols_(cols), data_(data)
+            , dist_((ORD == ORDERING::ColMajor) ? rows : cols)
+            {
+         }
 
         template <typename TB, ORDERING ORDB>
         MatrixView &operator=(const MatExpr<TB, ORDB> &m2)
@@ -43,27 +52,28 @@ namespace ASC_bla
         auto View() const { return MatrixView(rows_, cols_, data_); }
         size_t Size_Cols() const { return cols_; }
         size_t Size_Rows() const { return rows_; }
+        size_t Dist() const { return dist_; }
 
         T &operator()(size_t i, size_t j)
         {
             if constexpr (ORD == ORDERING::ColMajor)
             {
-                return data_[i](j * rows_);
+                return data_[i+j * rows_];
             }
             else
             {
-                return data_[j](i * cols_);
+                return data_[j+i * cols_];
             }
         }
         const T &operator()(size_t i, size_t j) const
         {
             if constexpr (ORD == ORDERING::ColMajor)
             {
-                return data_[i](j * rows_);
+                return data_[i+j * rows_];
             }
             else
             {
-                return data_[j](i * cols_);
+                return data_[j+i * cols_];
             }
         }
 
@@ -79,7 +89,12 @@ namespace ASC_bla
             }
         }
 
-        auto Row(size_t i)
+        auto Data() const
+        {
+            return data_;
+        }
+
+        auto Row(size_t i) const
         {
             if constexpr (ORD == ORDERING::ColMajor)
             {
@@ -89,19 +104,19 @@ namespace ASC_bla
             }
             else
             {
-                return Transpose(this).Row(i);
+                return Transpose().Row(i);
             }
         }
 
-        auto Col(size_t i)
+        auto Col(size_t i) const
         {
             if constexpr (ORD == ORDERING::ColMajor)
             {
-                return this.Row(i);
+                return Row(i);
             }
             else
             {
-                return Transpose(this).Col(i);
+                return Transpose().Col(i);
             }
         }
 
@@ -128,18 +143,32 @@ namespace ASC_bla
                 return MatrixView(rows_, next - first, data_ + first);
             }
         }
+
+        auto Size() const
+        {
+            return rows_ * cols_;
+        }
     };
 
     template <typename T, ORDERING ORD>
-    class Matrix : MatrixView<T, ORD>
+    class Matrix : public MatrixView<T, ORD>
     {
-        size_t rows_;
-        size_t cols_;
-        Vector<T> data_;
+
+        using MatrixView<T, ORD>::rows_;
+        using MatrixView<T, ORD>::cols_;
+        using MatrixView<T, ORD>::data_;
+        using MatrixView<T, ORD>::dist_;
+        using MatrixView<T, ORD>::Size;
+        using MatrixView<T, ORD>::Row;
+        using MatrixView<T, ORD>::Col;
+
+     public:
+        using MatrixView<T, ORD>::operator();
+
 
     public:
         // Constructors
-        Matrix(size_t rows, size_t cols) : MatrixView<T, ORD>(rows, cols, &data_), rows_(rows), cols_(cols), data_(rows * cols) {}
+        Matrix(size_t rows, size_t cols) : MatrixView<T, ORD>(rows, cols, new T[rows*cols]) {}
 
         // Copy constructor
         Matrix(const Matrix &other) : Matrix (other.rows_, other.cols_)
@@ -154,36 +183,10 @@ namespace ASC_bla
         }
 
         // Move constructor
-        Matrix(Matrix &&other) noexcept : MatrixView<T, ORD>(other.rows_, other.cols_, &other.data_), rows_(other.rows_), cols_(other.cols_), data_(std::move(other.data_)) {}
+        Matrix(Matrix &&other) noexcept : MatrixView<T, ORD>(other.rows_, other.cols_, other.data_) {}
 
         // Destructor
         ~Matrix() = default;
-
-        // Access operator for element (i, j)
-        T &operator()(size_t i, size_t j)
-        {
-            if constexpr (ORD == ORDERING::ColMajor)
-            {
-                return data_(i + j * rows_);
-            }
-            else
-            {
-                return data_(j + i * cols_);
-            }
-        }
-
-        // Const version of the access operator
-        const T &operator()(size_t i, size_t j) const
-        {
-            if constexpr (ORD == ORDERING::ColMajor)
-            {
-                return data_(i + j * rows_);
-            }
-            else
-            {
-                return data_(j + i * cols_);
-            }
-        }
 
         // Assignment operator
         Matrix &operator=(const Matrix &other)
@@ -214,11 +217,11 @@ namespace ASC_bla
                     }
                     if constexpr (ORD == ORDERING::ColMajor)
                     {
-                        os << matrix.data_(i + j * matrix.rows_);
+                        os << matrix.Data()[i + j * matrix.rows_];
                     }
                     else
                     {
-                        os << matrix.data_(j + i * matrix.cols_);
+                        os << matrix.Data()[j + i * matrix.cols_];
                     }
                 }
             }
@@ -227,31 +230,50 @@ namespace ASC_bla
         // Matrix-Matrix Multiplication
         Matrix operator*(const Matrix &other) const
         {
-            if (cols_ != other.rows_)
+            if (Size() != other.Size())
             {
                 // Invalid multiplication, return an empty matrix or throw an exception
-                return Matrix(0, 0);
+                throw std::invalid_argument("Invalid multiplication");
             }
 
             Matrix result(rows_, other.cols_);
 
             for (size_t i = 0; i < rows_; ++i)
             {
+                auto row = std::remove_const_t<decltype(Row(0))>(Col(i));
                 for (size_t j = 0; j < other.cols_; ++j)
                 {
-                    T sum = 0;
-                    for (size_t k = 0; k < cols_; ++k)
+                    const int dy = 1;
+                    const size_t SW = 16;
+
+                    if constexpr (std::is_same<double, T>::value)
                     {
-                        if constexpr (ORD == ORDERING::ColMajor)
+                        /*
+                        for (size_t k = 0; k < cols_; ++k)
                         {
-                            sum += (*this)(i, k) * other(k, j);
-                        }
-                        else
-                        {
-                            sum += (*this)(i, k) * other(k, j);
-                        }
+                            sum = FMA(SIMD<double,SW>(px[k]), SIMD<double,SW>(py+k*dy), sum);
+                        }*/
+                        auto col = std::remove_const_t<decltype(Col(0))>(other.Col(j));
+
+                        
+
+                        result(i, j) = InnerProduct<SW>(cols_, row, 1, col, 1);
                     }
-                    result(i, j) = sum;
+                    else{
+                        T sum = 0;
+                        for (size_t k = 0; k < cols_; ++k)
+                        {
+                            if constexpr (ORD == ORDERING::ColMajor)
+                            {
+                                sum += (*this)(i, k) * other(k, j);
+                            }
+                            else
+                            {
+                                sum += (*this)(i, k) * other(k, j);
+                            }
+                        }
+                        result(i, j) = sum;
+                    }
                 }
             }
             return result;
@@ -284,7 +306,7 @@ namespace ASC_bla
             if (rows_ != other.rows_ || cols_ != other.cols_)
             {
                 // Invalid addition, return an empty matrix or throw an exception
-                return Matrix(0, 0);
+                throw std::invalid_argument("Invalid addition");
             }
 
             Matrix result(rows_, cols_);
@@ -373,8 +395,312 @@ namespace ASC_bla
             }
         }
 
-        size_t Size_Rows() const { return rows_; }
-        size_t Size_Cols() const { return cols_; }
+        Matrix operator-(const Matrix &other) const
+        {
+            if (rows_ != other.rows_ || cols_ != other.cols_)
+            {
+                // Invalid addition, return an empty matrix or throw an exception
+                throw std::invalid_argument("Invalid addition");
+            }
+
+            Matrix result(rows_, cols_);
+
+            for (size_t i = 0; i < rows_; ++i)
+            {
+                for (size_t j = 0; j < cols_; ++j)
+                {
+                    if constexpr (ORD == ORDERING::ColMajor)
+                    {
+                        result(i, j) = (*this)(i, j) - other(i, j);
+                    }
+                    else
+                    {
+                        result(i, j) = (*this)(i, j) - other(i, j);
+                    }
+                }
+            }
+            return result;
+        }
+
+        Matrix operator/(const T &scal) const
+        {
+            Matrix result(rows_, cols_);
+
+            for (size_t i = 0; i < rows_; ++i)
+            {
+                for (size_t j = 0; j < cols_; ++j)
+                {
+                    if constexpr (ORD == ORDERING::ColMajor)
+                    {
+                        result(i, j) = (*this)(i, j) / scal;
+                    }
+                    else
+                    {
+                        result(i, j) = (*this)(i, j) / scal;
+                    }
+                }
+            }
+            return result;
+        }
+
+        Matrix operator-() const
+        {
+            Matrix result(rows_, cols_);
+
+            for (size_t i = 0; i < rows_; ++i)
+            {
+                for (size_t j = 0; j < cols_; ++j)
+                {
+                    if constexpr (ORD == ORDERING::ColMajor)
+                    {
+                        result(i, j) = -(*this)(i, j);
+                    }
+                    else
+                    {
+                        result(i, j) = -(*this)(i, j);
+                    }
+                }
+            }
+            return result;
+        }
+
+        Matrix operator+=(const Matrix &other)
+        {
+            if (rows_ != other.rows_ || cols_ != other.cols_)
+            {
+                // Invalid addition, return an empty matrix or throw an exception
+                throw std::invalid_argument("Invalid addition");
+            }
+
+            for (size_t i = 0; i < rows_; ++i)
+            {
+                for (size_t j = 0; j < cols_; ++j)
+                {
+                    if constexpr (ORD == ORDERING::ColMajor)
+                    {
+                        (*this)(i, j) += other(i, j);
+                    }
+                    else
+                    {
+                        (*this)(i, j) += other(i, j);
+                    }
+                }
+            }
+            return *this;
+        }
+
+        Matrix operator-=(const Matrix &other)
+        {
+            if (rows_ != other.rows_ || cols_ != other.cols_)
+            {
+                // Invalid addition, return an empty matrix or throw an exception
+                throw std::invalid_argument("Invalid addition");
+            }
+
+            for (size_t i = 0; i < rows_; ++i)
+            {
+                for (size_t j = 0; j < cols_; ++j)
+                {
+                    if constexpr (ORD == ORDERING::ColMajor)
+                    {
+                        (*this)(i, j) -= other(i, j);
+                    }
+                    else
+                    {
+                        (*this)(i, j) -= other(i, j);
+                    }
+                }
+            }
+            return *this;
+        }
+
+        Matrix operator*=(const T &scal)
+        {
+            for (size_t i = 0; i < rows_; ++i)
+            {
+                for (size_t j = 0; j < cols_; ++j)
+                {
+                    if constexpr (ORD == ORDERING::ColMajor)
+                    {
+                        (*this)(i, j) *= scal;
+                    }
+                    else
+                    {
+                        (*this)(i, j) *= scal;
+                    }
+                }
+            }
+            return *this;
+        }
+
+        Matrix operator/=(const T &scal)
+        {
+            for (size_t i = 0; i < rows_; ++i)
+            {
+                for (size_t j = 0; j < cols_; ++j)
+                {
+                    if constexpr (ORD == ORDERING::ColMajor)
+                    {
+                        (*this)(i, j) /= scal;
+                    }
+                    else
+                    {
+                        (*this)(i, j) /= scal;
+                    }
+                }
+            }
+            return *this;
+        }
+
+        Matrix operator*=(const Matrix &other)
+        {
+            if (Size() != other.Size())
+            {
+                // Invalid multiplication, return an empty matrix or throw an exception
+                throw std::invalid_argument("Invalid multiplication");
+            }
+
+            Matrix result(rows_, other.cols_);
+
+            for (size_t i = 0; i < rows_; ++i)
+            {
+                for (size_t j = 0; j < other.cols_; ++j)
+                {
+                    T sum = 0;
+                    for (size_t k = 0; k < cols_; ++k)
+                    {
+                        if constexpr (ORD == ORDERING::ColMajor)
+                        {
+                            sum += (*this)(i, k) * other(k, j);
+                        }
+                        else
+                        {
+                            sum += (*this)(i, k) * other(k, j);
+                        }
+                    }
+                    result(i, j) = sum;
+                }
+            }
+            *this = result;
+            return *this;
+        }
+
+        T Determinant() const
+        {
+            if (rows_ != cols_)
+            {
+                // Invalid determinant, return an empty matrix or throw an exception
+                throw std::invalid_argument("Invalid determinant");
+            }
+
+            if (rows_ == 1)
+            {
+                return (*this)(0, 0);
+            }
+            else if (rows_ == 2)
+            {
+                return (*this)(0, 0) * (*this)(1, 1) - (*this)(0, 1) * (*this)(1, 0);
+            }
+            else
+            {
+                T det = 0;
+                for (size_t i = 0; i < rows_; ++i)
+                {
+                    Matrix<T, ORD> sub_matrix(rows_ - 1, cols_ - 1);
+                    for (size_t j = 1; j < rows_; ++j)
+                    {
+                        for (size_t k = 0; k < cols_; ++k)
+                        {
+                            if (k < i)
+                            {
+                                sub_matrix(j - 1, k) = (*this)(j, k);
+                            }
+                            else if (k > i)
+                            {
+                                sub_matrix(j - 1, k - 1) = (*this)(j, k);
+                            }
+                        }
+                    }
+                    if constexpr (ORD == ORDERING::ColMajor)
+                    {
+                        det += (*this)(0, i) * sub_matrix.Determinant();
+                    }
+                    else
+                    {
+                        det += (*this)(0, i) * sub_matrix.Determinant();
+                    }
+                }
+                return det;
+            }
+        }
+
+        // Obsolete
+        [[deprecated("This does not work as intended")]]
+        Matrix Inverse() const
+        {
+            if (rows_ != cols_)
+            {
+                // Invalid determinant, return an empty matrix or throw an exception
+                throw std::invalid_argument("Invalid determinant");
+            }
+
+            Matrix<T, ORD> result(rows_, cols_);
+
+            if (rows_ == 1)
+            {
+                result(0, 0) = 1 / (*this)(0, 0);
+            }
+            else if (rows_ == 2)
+            {
+                T det = (*this)(0, 0) * (*this)(1, 1) - (*this)(0, 1) * (*this)(1, 0);
+                result(0, 0) = (*this)(1, 1) / det;
+                result(0, 1) = -(*this)(0, 1) / det;
+                result(1, 0) = -(*this)(1, 0) / det;
+                result(1, 1) = (*this)(0, 0) / det;
+            }
+            else
+            {
+                T det = Determinant();
+                for (size_t i = 0; i < rows_; ++i)
+                {
+                    for (size_t j = 0; j < cols_; ++j)
+                    {
+                        Matrix<T, ORD> sub_matrix(rows_ - 1, cols_ - 1);
+                        for (size_t k = 0; k < rows_; ++k)
+                        {
+                            for (size_t l = 0; l < cols_; ++l)
+                            {
+                                if (k < i && l < j)
+                                {
+                                    sub_matrix(k, l) = (*this)(k, l);
+                                }
+                                else if (k < i && l > j)
+                                {
+                                    sub_matrix(k, l - 1) = (*this)(k, l);
+                                }
+                                else if (k > i && l < j)
+                                {
+                                    sub_matrix(k - 1, l) = (*this)(k, l);
+                                }
+                                else if (k > i && l > j)
+                                {
+                                    sub_matrix(k - 1, l - 1) = (*this)(k, l);
+                                }
+                            }
+                        }
+                        if constexpr (ORD == ORDERING::ColMajor)
+                        {
+                            result(j, i) = sub_matrix.Determinant() / det;
+                        }
+                        else
+                        {
+                            result(i, j) = sub_matrix.Determinant() / det;
+                        }
+                    }
+                }
+            }
+            return result;
+        }
     };
 
     template <typename T, ORDERING ORD>

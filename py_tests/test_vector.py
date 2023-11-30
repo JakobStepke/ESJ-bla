@@ -56,3 +56,9 @@ print ("height of A =", A.height())
 # Transpose of A:
 print ("transpose of A =", A.transpose())
 print ("transpose of A =", A.T())
+print ("det of A =", A.determinant())
+print ("inverse of A =", A.inverse())
+
+print ("A*Inverse(A) =", A.inverse()*A)
+
+print ("A[0,0] =", A[0,0])
