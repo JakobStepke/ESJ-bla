@@ -8,6 +8,8 @@
 #include "vector.h"
 #include "ordering.h"
 
+#include "simd.h"
+
 namespace ASC_bla
 {
 
@@ -90,7 +92,7 @@ namespace ASC_bla
             return data_;
         }
 
-        auto Row(size_t i)
+        auto Row(size_t i) const
         {
             if constexpr (ORD == ORDERING::ColMajor)
             {
@@ -100,19 +102,19 @@ namespace ASC_bla
             }
             else
             {
-                return Transpose(this).Row(i);
+                return Transpose().Row(i);
             }
         }
 
-        auto Col(size_t i)
+        auto Col(size_t i) const
         {
             if constexpr (ORD == ORDERING::ColMajor)
             {
-                return this.Row(i);
+                return Row(i);
             }
             else
             {
-                return Transpose(this).Col(i);
+                return Transpose().Col(i);
             }
         }
 
@@ -155,6 +157,8 @@ namespace ASC_bla
         using MatrixView<T, ORD>::data_;
         using MatrixView<T, ORD>::dist_;
         using MatrixView<T, ORD>::Size;
+        using MatrixView<T, ORD>::Row;
+        using MatrixView<T, ORD>::Col;
 
      public:
         using MatrixView<T, ORD>::operator();
@@ -229,6 +233,8 @@ namespace ASC_bla
                 // Invalid multiplication, return an empty matrix or throw an exception
                 throw std::invalid_argument("Invalid multiplication");
             }
+            
+            constexpr size_t SW=16;
 
             Matrix result(rows_, other.cols_);
 
@@ -236,18 +242,12 @@ namespace ASC_bla
             {
                 for (size_t j = 0; j < other.cols_; ++j)
                 {
-                    T sum = 0;
-                    for (size_t k = 0; k < cols_; ++k)
-                    {
-                        if constexpr (ORD == ORDERING::ColMajor)
-                        {
-                            sum += (*this)(i, k) * other(k, j);
-                        }
-                        else
-                        {
-                            sum += (*this)(i, k) * other(k, j);
-                        }
-                    }
+                    auto row = Row(i);
+                    auto col = other.Col(j);
+                    
+                    // Inner product row.col => sum
+
+                    T sum = InnerProduct<SW>(cols_, row.Data(), col.Data(), ASC_HPC::SIMD<double,SW>::Size());
                     result(i, j) = sum;
                 }
             }
@@ -579,6 +579,7 @@ namespace ASC_bla
             else
             {
                 T det = 0;
+                size_t sgn = 1;
                 for (size_t i = 0; i < rows_; ++i)
                 {
                     Matrix<T, ORD> sub_matrix(rows_ - 1, cols_ - 1);
@@ -586,23 +587,48 @@ namespace ASC_bla
                     {
                         for (size_t k = 0; k < cols_; ++k)
                         {
-                            if (k < i)
+                            if (j <= i)
                             {
-                                sub_matrix(j - 1, k) = (*this)(j, k);
+                                if (k < i)
+                                {
+                                    sub_matrix(j - 1, k) = (*this)(j - 1, k);
+                                }
+                                else if (k > i)
+                                {
+                                    sub_matrix(j - 1, k - 1) = (*this)(j - 1, k);
+                                }
                             }
-                            else if (k > i)
+                            else if (j > i)
                             {
-                                sub_matrix(j - 1, k - 1) = (*this)(j, k);
+                                if (k < i)
+                                {
+                                    sub_matrix(j - 1, k) = (*this)(j, k);
+                                }
+                                else if (k > i)
+                                {
+                                    sub_matrix(j - 1, k - 1) = (*this)(j, k);
+                                }
                             }
+                            // std::cout << "A_ij = " << sub_matrix << std::endl;
                         }
                     }
-                    if constexpr (ORD == ORDERING::ColMajor)
+
+                    if (i % 2 == 1)
                     {
-                        det += (*this)(0, i) * sub_matrix.Determinant();
+                        sgn = -1;
                     }
                     else
                     {
-                        det += (*this)(0, i) * sub_matrix.Determinant();
+                        sgn = 1;
+                    }
+
+                    if constexpr (ORD == ORDERING::ColMajor)
+                    {
+                        det += sgn*(*this)(0, i) * sub_matrix.Determinant();
+                    }
+                    else
+                    {
+                        det += sgn*(*this)(i, 0) * sub_matrix.Determinant();
                     }
                 }
                 return det;
@@ -610,16 +636,17 @@ namespace ASC_bla
         }
 
         // Obsolete
-        [[deprecated("This does not work as intended")]]
+        // [[deprecated("This does not work as intended")]]
         Matrix Inverse() const
         {
-            if (rows_ != cols_)
+            if (rows_ != cols_ || Determinant() == 0)
             {
                 // Invalid determinant, return an empty matrix or throw an exception
                 throw std::invalid_argument("Invalid determinant");
             }
 
             Matrix<T, ORD> result(rows_, cols_);
+            size_t sgn = 1;
 
             if (rows_ == 1)
             {
@@ -663,14 +690,25 @@ namespace ASC_bla
                                 }
                             }
                         }
-                        if constexpr (ORD == ORDERING::ColMajor)
+
+                        if (i + j % 2 == 1)
                         {
-                            result(j, i) = sub_matrix.Determinant() / det;
+                            sgn = -1;
                         }
                         else
                         {
-                            result(i, j) = sub_matrix.Determinant() / det;
+                            sgn = 1;
                         }
+
+                        if constexpr (ORD == ORDERING::ColMajor)
+                        {
+                            result(j, i) = sgn*sub_matrix.Determinant() / det;
+                        }
+                        else
+                        {
+                            result(i, j) = sgn*sub_matrix.Determinant() / det;
+                        }
+
                     }
                 }
             }

@@ -5,6 +5,7 @@
 
 #include "expression.h"
 
+#include "simd.h"
 
 namespace ASC_bla
 {
@@ -127,6 +128,18 @@ namespace ASC_bla
       ost << ", " << v(i);
     return ost;
   }
+
+  template <size_t SW>
+auto InnerProduct (size_t n, double * px, double * py, size_t dy)
+{
+  ASC_HPC::SIMD<double,SW> sum{0.0};
+  for (size_t i = 0; i < n; i++)
+    {
+      // sum += px[i] * SIMD<double,SW>(py+i*dy);
+      sum = ASC_HPC::FMA(ASC_HPC::SIMD<double,SW>(px[i]), ASC_HPC::SIMD<double,SW>(py+i*dy), sum);
+    }
+  return sum;
+}
   
 }
 
