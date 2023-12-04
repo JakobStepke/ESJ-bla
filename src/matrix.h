@@ -73,6 +73,22 @@ namespace ASC_bla
             return *this;
         }
 
+        template <typename TB, ORDERING ORDB>
+        void CopyToNew(const MatrixView<TB, ORDB> &m2)
+        {
+            rows_ = m2.Size_Cols();
+            cols_ = m2.Size_Rows();
+            data_ = new T[rows_ * cols_];
+
+            for (size_t i = 0; i < rows_; ++i)
+            {
+                for (size_t j = 0; j < cols_; ++j)
+                {
+                    (*this)(i, j) = m2(i, j);
+                }
+            }
+        }
+
         MatrixView &operator=(T scal)
         {
             rows_ = scal;

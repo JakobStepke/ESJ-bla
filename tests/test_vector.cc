@@ -96,4 +96,28 @@ int main()
   x.Slice(1, 5) = 10;
 
   std::cout << "x = " << x << std::endl;
+
+  /*
+  fprime = 
+    0 -0.125664
+    0.125664 0
+  */
+
+  const size_t zero = 0;
+  const size_t one = 1;
+
+  auto fprime = bla::Matrix<double, bla::ORDERING::ColMajor>(2, 2);
+  fprime(zero, zero) = 3;
+  fprime(one, one) = 4;
+
+  std::cout << "fprime = " << fprime << std::endl;
+
+  auto fprimeInverse = bla::InverseLapack(fprime);
+
+  std::cout << "fprime = " << fprime << std::endl;
+  std::cout << "fprimeInverse = " << fprimeInverse << std::endl;
+
+  std::cout << "fprime*fprimeInverse = " << fprime*fprimeInverse << std::endl;
+
+
 }
