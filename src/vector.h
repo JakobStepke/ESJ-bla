@@ -215,6 +215,10 @@ auto InnerProduct<1> (size_t n, const VectorView<double, size_t> x,
   double sum = 0.0;
   for (size_t i = 0; i < n; i++)
     {
+      std::cout << "x(i) = " << x(i) << std::endl;
+      std::cout << "y(i) = " << y(i) << std::endl;
+      std::cout << "x(i)*y(i) = " << x(i)*y(i) << std::endl;
+      std::cout << "sum = " << sum << std::endl;
       sum += x(i) * y(i);
     }
   return sum;

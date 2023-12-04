@@ -134,7 +134,7 @@ namespace ASC_bla
             }
             else
             {
-                return VectorView(cols_, (size_t)1, data_ + i  * rows_);
+                return VectorView(cols_, (size_t)1, data_ + i  * cols_);
             }
         }
 
@@ -142,7 +142,7 @@ namespace ASC_bla
         {
             if constexpr (ORD == ORDERING::ColMajor)
             {
-                return VectorView(rows_, (size_t)1, data_ + i * cols_);
+                return VectorView(rows_, (size_t)1, data_ + i * rows_);
             }
             else
             {
@@ -271,7 +271,7 @@ namespace ASC_bla
                                 {
                                     if(i + k + 7 < rows_)
                                     {
-                                        auto tmp = InnerProduct8<8>(rows_, Row(i + k), Row(i + k + 1), Row(i + k + 2), Row(i + k + 3), Row(i + k + 4), Row(i + k + 5), Row(i + k + 6), Row(i + k + 7), other.Col(j + l));
+                                        auto tmp = InnerProduct8<8>(cols_, Row(i + k), Row(i + k + 1), Row(i + k + 2), Row(i + k + 3), Row(i + k + 4), Row(i + k + 5), Row(i + k + 6), Row(i + k + 7), other.Col(j + l));
                                         result_to_be_merged(i + k, j + l) = std::get<0>(tmp);
                                         k++;
                                         result_to_be_merged(i + k, j + l) = std::get<1>(tmp);
@@ -290,7 +290,7 @@ namespace ASC_bla
                                     }
                                     else
                                     {
-                                        result_to_be_merged(i + k, j + l) = InnerProduct<8>(rows_, Row(i + k), other.Col(j + l));
+                                        result_to_be_merged(i + k, j + l) = InnerProduct<8>(cols_, Row(i + k), other.Col(j + l));
                                     }
                                 }
                             }

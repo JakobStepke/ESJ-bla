@@ -62,18 +62,28 @@ void test_matrix() {
 	std::cout << "A = " << A << std::endl;
 	std::cout << "B = " << B << std::endl;
 
-	ASC_bla::Matrix<double, ASC_bla::ORDERING::ColMajor> C = B*A;
+	ASC_bla::Matrix<double, ASC_bla::ORDERING::ColMajor> C = A*B;
 	ASC_bla::Matrix<double, ASC_bla::ORDERING::ColMajor> D = A * B + A * B;
 	ASC_bla::Matrix<double, ASC_bla::ORDERING::ColMajor> E = ASC_bla::InverseLapack(A);
 	ASC_bla::Matrix<double, ASC_bla::ORDERING::ColMajor> I = A * E;
+	auto RowA1 = A.Row(1);
+	auto ColB1 = B.Col(1);
 	std::cout << "C = " << C << std::endl;
 	std::cout << "D = " << D << std::endl;
 	std::cout << "E = " << E << std::endl;
 	std::cout << "I = " << I << std::endl;
+	std::cout << "RowA1 = " << RowA1 << std::endl;
+	std::cout << "ColB1 = " << ColB1 << std::endl;
+	std::cout << ASC_bla::InnerProduct<1>((size_t)3, RowA1, ColB1) << std::endl;
 
 	assert(C(0, 0) == 1);
 	assert(C(0, 1) == 1);
 	assert(C(1, 0) == 2);
 	assert(C(1, 1) == 2);
 	assert(C(2, 0) == 0);
+	assert(C(2, 1) == 0);
+	assert(C(3, 0) == 0);
+	assert(C(3, 1) == 0);
+	assert(C(4, 0) == 0);
+	assert(C(4, 1) == 0);
 }
