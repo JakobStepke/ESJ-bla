@@ -50,11 +50,15 @@ int main()
   std::cout << "D = " << D << std::endl;
   std::cout << "E = " << E << std::endl;
   std::cout << "I = " << Identity << std::endl;
+  
   std::cout << "A*I = " << A*Identity << std::endl;
   std::cout << "I*A = " << Identity*A << std::endl;
   std::cout << "X = " << X << std::endl;
   std::cout << "A*X = " << A*X << std::endl;
   std::cout << "X*A = " << X*A << std::endl;
+
+  std::cout << "A = " << A << std::endl;
+  std::cout << "X = " << X << std::endl;
 
   std::cout << "X.Row(0) = " << X.Row(0) << std::endl;
   std::cout << "X.Row(1) = " << X.Row(1) << std::endl;
@@ -64,6 +68,17 @@ int main()
 
   std::cout << "X.Col(0) = " << X.Col(0) << std::endl;
   std::cout << "X.Col(1) = " << X.Col(1) << std::endl;
+  std::cout << "X.Col(2) = " << X.Col(2) << std::endl;
+  std::cout << "X.Col(3) = " << X.Col(3) << std::endl;
+  std::cout << "X.Col(4) = " << X.Col(4) << std::endl;
+  std::cout << "X.Row(4).Data() = " << X.Row(4).Data()[10] << std::endl;
+  std::cout << "X.Flatten() = " << X.Flatten() << std::endl;
+
+  size_t i = 1;
+  std::cout << "X.Row(i) = " << X.Row(i) << std::endl;
+  std::cout << "A.Col(i) = " << A.Col(i) << std::endl;
+
+  std::cout << "InnerProduct(X.Row(i), A.Col(i)) = " << ASC_bla::InnerProduct<8>((size_t)n, X.Row(i), A.Col(i)) << std::endl;
 
 
   std::cout << "A*x = " << A*x << std::endl;

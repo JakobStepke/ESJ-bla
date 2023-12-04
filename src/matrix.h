@@ -130,7 +130,7 @@ namespace ASC_bla
         {
             if constexpr (ORD == ORDERING::ColMajor)
             {
-                return VectorView(cols_, rows_, data_ + i * rows_);
+                return VectorView(cols_, rows_, data_ + i);
             }
             else
             {
@@ -146,8 +146,13 @@ namespace ASC_bla
             }
             else
             {
-                return VectorView(rows_, cols_, data_ + i * cols_);
+                return VectorView(rows_, cols_, data_ + i);
             }
+        }
+
+        auto Flatten() const
+        {
+            return VectorView(rows_ * cols_, (size_t)1, data_);
         }
 
         auto Rows(size_t first, size_t next) const
@@ -266,7 +271,7 @@ namespace ASC_bla
                                 {
                                     if(i + k + 7 < rows_)
                                     {
-                                        auto tmp = InnerProduct8<8>(rows_, Row(i + k), Row(i + k + 1), Row(i + k + 2), Row(i + k + 3), Row(i + k + 4), Row(i + k + 5), Row(i + k + 6), Row(i + k + 7), other.Col(j + l), 1);
+                                        auto tmp = InnerProduct8<8>(rows_, Row(i + k), Row(i + k + 1), Row(i + k + 2), Row(i + k + 3), Row(i + k + 4), Row(i + k + 5), Row(i + k + 6), Row(i + k + 7), other.Col(j + l));
                                         result_to_be_merged(i + k, j + l) = std::get<0>(tmp);
                                         k++;
                                         result_to_be_merged(i + k, j + l) = std::get<1>(tmp);
@@ -285,7 +290,7 @@ namespace ASC_bla
                                     }
                                     else
                                     {
-                                        result_to_be_merged(i + k, j + l) = InnerProduct<8>(rows_, Row(i + k), 1, other.Col(j + l), 1);
+                                        result_to_be_merged(i + k, j + l) = InnerProduct<8>(rows_, Row(i + k), other.Col(j + l));
                                     }
                                 }
                             }

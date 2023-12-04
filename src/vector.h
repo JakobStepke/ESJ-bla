@@ -188,24 +188,36 @@ namespace ASC_bla
   }
 
   template <size_t SW>
-auto InnerProduct (size_t n, const VectorView<double, size_t> x, size_t dx,
-                   const VectorView<double, size_t> y, size_t dy)
+auto InnerProduct (size_t n, const VectorView<double, size_t> x,
+                   const VectorView<double, size_t> y)
 {
   SIMD<double,SW> sum{0.0};
   for (size_t i = 0; i < n; i++)
     {
       // sum += px[i] * SIMD<double,SW>(py+i*dy);
-      sum = FMA(SIMD<double,SW>(x.Data()[i]), SIMD<double,SW>(y.Data()[i*dy]), sum);
+      sum = FMA(SIMD<double,SW>(x(i)), SIMD<double,SW>(y(i)), sum);
     }
+    
     /*
     std::cout << "sum = " << sum << std::endl;
     std::cout << "x = " << x << std::endl;
     std::cout << "y = " << y << std::endl;
     */
-
   double first_val = sum.GetFirst();
 
   return first_val;
+}
+
+template<>
+auto InnerProduct<1> (size_t n, const VectorView<double, size_t> x,
+                      const VectorView<double, size_t> y)
+{
+  double sum = 0.0;
+  for (size_t i = 0; i < n; i++)
+    {
+      sum += x(i) * y(i);
+    }
+  return sum;
 }
 
 template <size_t SW>
@@ -217,7 +229,7 @@ auto InnerProduct8 (size_t n, const VectorView<double, size_t> x0,
                     const VectorView<double, size_t> x5, 
                     const VectorView<double, size_t> x6, 
                     const VectorView<double, size_t> x7, 
-                    const VectorView<double, size_t> y, size_t dy)
+                    const VectorView<double, size_t> y)
 {
   SIMD<double,SW> sum0{0.0};
   SIMD<double,SW> sum1{0.0};
@@ -231,14 +243,14 @@ auto InnerProduct8 (size_t n, const VectorView<double, size_t> x0,
   for (size_t i = 0; i < n; i++)
     {
       // sum += px[i] * SIMD<double,SW>(py+i*dy);
-      sum0 = FMA(SIMD<double,SW>(x0.Data()[i]), SIMD<double,SW>(y.Data()[i*dy]), sum0);
-      sum1 = FMA(SIMD<double,SW>(x1.Data()[i]), SIMD<double,SW>(y.Data()[i*dy]), sum1);
-      sum2 = FMA(SIMD<double,SW>(x2.Data()[i]), SIMD<double,SW>(y.Data()[i*dy]), sum2);
-      sum3 = FMA(SIMD<double,SW>(x3.Data()[i]), SIMD<double,SW>(y.Data()[i*dy]), sum3);
-      sum4 = FMA(SIMD<double,SW>(x4.Data()[i]), SIMD<double,SW>(y.Data()[i*dy]), sum4);
-      sum5 = FMA(SIMD<double,SW>(x5.Data()[i]), SIMD<double,SW>(y.Data()[i*dy]), sum5);
-      sum6 = FMA(SIMD<double,SW>(x6.Data()[i]), SIMD<double,SW>(y.Data()[i*dy]), sum6);
-      sum7 = FMA(SIMD<double,SW>(x7.Data()[i]), SIMD<double,SW>(y.Data()[i*dy]), sum7);
+      sum0 = FMA(SIMD<double,SW>(x0(i)), SIMD<double,SW>(y(i)), sum0);
+      sum1 = FMA(SIMD<double,SW>(x1(i)), SIMD<double,SW>(y(i)), sum1);
+      sum2 = FMA(SIMD<double,SW>(x2(i)), SIMD<double,SW>(y(i)), sum2);
+      sum3 = FMA(SIMD<double,SW>(x3(i)), SIMD<double,SW>(y(i)), sum3);
+      sum4 = FMA(SIMD<double,SW>(x4(i)), SIMD<double,SW>(y(i)), sum4);
+      sum5 = FMA(SIMD<double,SW>(x5(i)), SIMD<double,SW>(y(i)), sum5);
+      sum6 = FMA(SIMD<double,SW>(x6(i)), SIMD<double,SW>(y(i)), sum6);
+      sum7 = FMA(SIMD<double,SW>(x7(i)), SIMD<double,SW>(y(i)), sum7);
     }
   return std::tuple(sum0.GetFirst(), sum1.GetFirst(), sum2.GetFirst(), sum3.GetFirst(),
                     sum4.GetFirst(), sum5.GetFirst(), sum6.GetFirst(), sum7.GetFirst());
