@@ -175,3 +175,41 @@ void test_matrix_vector()
 	assert(Ax(3) == 0);
 	assert(Ax(4) == 0);
 }
+
+void test_100_100_matmul()
+{
+	size_t n = 100;
+	size_t m = 100;
+	ASC_bla::Matrix<double, ASC_bla::ORDERING::ColMajor> A(n, m);
+	ASC_bla::Matrix<double, ASC_bla::ORDERING::ColMajor> B(m, n);
+
+	for (size_t i = 0; i < A.Size_Rows(); i++)
+	{
+		for (size_t j = 0; j < A.Size_Cols(); j++)
+		{
+			if (i == j)
+				A(i, j) = 1;
+			else
+				A(i, j) = 0;
+		}
+	}
+
+	for (size_t i = 0; i < B.Size_Rows(); i++)
+	{
+		for (size_t j = 0; j < B.Size_Cols(); j++)
+		{
+			B(i, j) = i + 1;
+		}
+	}
+
+	// std::cout << "A = " << A << std::endl;
+	// std::cout << "B = " << B << std::endl;
+
+	ASC_bla::Matrix<double, ASC_bla::ORDERING::ColMajor> C = A*B;
+	
+	std::cout << "C = " << C << std::endl;
+
+	assert(C(0, 0) == 1);
+	assert(C(0, 1) == 2);
+	assert(C(0, 2) == 3);
+}

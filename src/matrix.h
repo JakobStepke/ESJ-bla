@@ -10,6 +10,8 @@
 
 #include "simd.h"
 
+#include <optional>
+
 using namespace ASC_HPC;
 
 namespace ASC_bla
@@ -271,6 +273,15 @@ namespace ASC_bla
             if constexpr (std::is_same<double, T>::value)
             {
                 MatrixView result_to_be_merged(rows_, other.cols_);
+                
+                std::optional<MatrixView<double, ORDERING::ColMajor>> sub_result_list = std::nullopt;
+
+                // Check if dimension >= 96, if yes, use caching
+                if (rows_ >= 96 && other.cols_ >= 96)
+                {
+                    sub_result_list = MatrixView<double, ORDERING::ColMajor>(96 * 96, size_t(rows_ / 96) * size_t(other.cols_ / 96));
+                    //std::cout << "sub_result_list init\n" << sub_result_list.value() << "\n";
+                }
 
                 for (size_t i = 0; i < rows_; i+=96)
                 {
@@ -281,6 +292,8 @@ namespace ASC_bla
                         if (i + 96 + 1 > rows_  || j + 96 + 1 > other.cols_)
                         {
                             // If not, use the normal multiplication
+
+                            // std::cout << "Normal\n";
                             for (size_t l = 0; l + j < other.cols_; ++l)
                             {
                                 for (size_t k = 0; k + i < rows_; ++k)
@@ -314,26 +327,68 @@ namespace ASC_bla
                         else
                         {
                             // If yes, use caching
+
+                            // std::cout << "Caching\n";
+
                             auto sub_matrix = SubMatrix(i, 96, j, 96);
                             auto sub_matrix_other = other.SubMatrix(i, 96, j, 96);
-                            //std::cout << sub_matrix << "\n";
+
+                            // std::cout << "Sub matrix\n" << sub_matrix << "\n";
+                            // std::cout << "Sub matrix other\n" << sub_matrix_other << "\n";
+
                             auto sub_matrix_result = sub_matrix * sub_matrix_other;
-                            for (size_t k = 0; k < 96; ++k)
+
+                            // std::cout << "Sub matrix result\n" << sub_matrix_result << "\n";
+
+                            auto flat = sub_matrix_result.Flatten();
+                            auto col_var = sub_result_list.value().Col(size_t((i + j) / 96));
+
+                            for (size_t k = 0; k < flat.Size(); ++k)
                             {
-                                for (size_t l = 0; l < 96; ++l)
-                                {
-                                    result_to_be_merged(i + k, j + l) = sub_matrix_result(k, l);
-                                }
+                                col_var(k) = flat(k);
                             }
+
+                            // std::cout << "Sub matrix result flatten\n" << sub_matrix_result.Flatten() << "\n";
+
+                            // std::cout << "Sub result list\n" << sub_result_list.value().Col(size_t((i + j) / 96)) << "\n";
                         }
                     }
                 }
-                // Merge the result
+                
+                // std::cout << "Rows: " << rows_ << "\n";
+                // std::cout << "Cols: " << other.cols_ << "\n";
+
+                // Check if dimension < 96, if yes, copy results from result_to_be_merged to result
+                if (rows_ <= 96 || other.cols_ <= 96)
+                {
+                    // std::cout << "result_to_be_merged\n" << result_to_be_merged << "\n";
+
+                    return result_to_be_merged;
+                }
+
+                // std::cout << "sub_result_list\n" << sub_result_list.value() << "\n";
+
+                // Merge the result from sub_result_list to result by using the sub_result_list in the following way:
+                // result(i, j) = sum(sub_result_list.Row(i * j)(cols//96 * k)) where k is an index from 0 to cols//96 * rows//96
+
                 for (size_t i = 0; i < rows_; ++i)
                 {
                     for (size_t j = 0; j < other.cols_; ++j)
                     {
-                        result(i, j) = result_to_be_merged(i, j);
+                        // std::cout << "i: " << i << "\n";
+
+                        auto row_var = sub_result_list.value().Row(((i + j)/96) * size_t(rows_ / 96) * size_t(other.cols_ / 96));
+
+                        // std::cout << "row_var\n" << row_var << "\n";
+
+                        auto sum = 0.0;
+
+                        for (size_t k = 0; k < size_t(cols_ / 96) * size_t(rows_ / 96); ++k)
+                        {
+                            sum += row_var(k + j/96);
+                        }
+
+                        result(i, j) = sum;
                     }
                 }
 
