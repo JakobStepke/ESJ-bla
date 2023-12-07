@@ -209,7 +209,18 @@ void test_100_100_matmul()
 	
 	std::cout << "C = " << C << std::endl;
 
-	assert(C(0, 0) == 1);
-	assert(C(0, 1) == 2);
-	assert(C(0, 2) == 3);
+	assert(C(0, 0) == B(0, 0));
+	assert(C(0, 1) == B(0, 1));
+	assert(C(0, 2) == B(0, 2));
+	assert(C(0, 3) == B(0, 3));
+	assert(C(0, 4) == B(0, 4));
+	assert(C(0, 5) == B(0, 5));
+
+	assert(C(1, 0) == B(1, 0));
+	assert(C(1, 1) == B(1, 1));
+	assert(C(1, 2) == B(1, 2));
+
+
+	assert(C(20, 20) == B(20, 20));
+	assert(C(20, 21) == B(20, 21));
 }

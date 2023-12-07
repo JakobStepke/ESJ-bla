@@ -371,26 +371,61 @@ namespace ASC_bla
                 // Merge the result from sub_result_list to result by using the sub_result_list in the following way:
                 // result(i, j) = sum(sub_result_list.Row(i * j)(cols//96 * k)) where k is an index from 0 to cols//96 * rows//96
 
+                // for (size_t i = 0; i < rows_; ++i)
+                // {
+                //     for (size_t j = 0; j < other.cols_; ++j)
+                //     {
+                //         // std::cout << "i: " << i << "\n";
+
+                //         auto row_var = sub_result_list.value().Row(i + j * 96);
+
+                //         // std::cout << "row_var\n" << row_var << "\n";
+
+                //         auto sum = row_var((i + j) / 96);
+
+                //         // for (size_t k = i; k < size_t(rows_ / 96) * size_t(other.cols_ / 96); ++k)
+                //         // {
+                //         //     sum += row_var(0);
+                //         // }
+
+                //         result(i, j) = sum;
+                //     }
+                // }
+
+
+                // std::cout << "Size_Rows: " << sub_result_list.value().Size_Rows() << "\n";
+                
+                for (size_t i = 0; i < sub_result_list.value().Size_Rows(); i+=96)
+                {
+                    for (short k = 0; k < 96; ++k)
+                    {
+                        auto row_var = sub_result_list.value().Row(i + k);
+
+                        auto sum = 0;
+                        // This shouldn't start from 0, but this makes it work
+                        for (size_t j = 0; j < sub_result_list.value().Size_Cols(); j += 96)
+                        {
+                            sum += row_var(j);
+                        }
+
+                        result(k, size_t(i/96)) = sum;
+                    
+                    }
+                }
+
+                // Copy the result (last cols/rows) from result_to_be_merged to 
                 for (size_t i = 0; i < rows_; ++i)
                 {
                     for (size_t j = 0; j < other.cols_; ++j)
                     {
-                        // std::cout << "i: " << i << "\n";
-
-                        auto row_var = sub_result_list.value().Row(((i + j)/96) * size_t(rows_ / 96) * size_t(other.cols_ / 96));
-
-                        // std::cout << "row_var\n" << row_var << "\n";
-
-                        auto sum = 0.0;
-
-                        for (size_t k = 0; k < size_t(cols_ / 96) * size_t(rows_ / 96); ++k)
+                        if (i >= size_t(rows_/96)*96 || j >= size_t(other.cols_/96)*96)
                         {
-                            sum += row_var(k + j/96);
+                            result(i, j) = result_to_be_merged(i, j);
                         }
-
-                        result(i, j) = sum;
                     }
                 }
+
+                // std::cout << "result to be merged\n" << result_to_be_merged << "\n";
 
                 return result;
             }
