@@ -28,9 +28,19 @@ namespace ASC_bla
     
     VectorView (size_t size, TDIST dist, T * data)
       : data_(data), size_(size), dist_(dist) { }
+
+    VectorView (const VectorView & v)
+      : data_(v.data_), size_(v.size_), dist_(v.dist_) { }
     
     template <typename TB>
     VectorView & operator= (const VecExpr<TB> & v2)
+    {
+      for (size_t i = 0; i < size_; i++)
+        data_[dist_*i] = v2(i);
+      return *this;
+    }
+
+    VectorView & operator= (const VectorView& v2)
     {
       for (size_t i = 0; i < size_; i++)
         data_[dist_*i] = v2(i);
@@ -105,7 +115,7 @@ namespace ASC_bla
     auto Norm2() const {
       double sum = 0;
       for (size_t i = 0; i < size_; i++)
-        sum += data_[dist_*i]*data_[dist_*i];
+        sum += pow(data_[dist_*i], 2);
       return sqrt(sum);
     }
       
@@ -163,6 +173,13 @@ namespace ASC_bla
     {
       for (size_t i = 0; i < size_; i++)
         data_[i] = v2(i);
+      return *this;
+    }
+
+    Vector & operator= (T scal)
+    {
+      for (size_t i = 0; i < size_; i++)
+        data_[i] = scal;
       return *this;
     }
 
