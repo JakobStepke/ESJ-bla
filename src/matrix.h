@@ -75,12 +75,18 @@ namespace ASC_bla
             return *this;
         }
 
-        template <typename TB, ORDERING ORDB>
-        MatrixView &operator=(const MatrixView<TB, ORDB> &m2)
+        MatrixView &operator=(const MatrixView &m2)
         {
             rows_ = m2.Size_Cols();
             cols_ = m2.Size_Cols();
-            data_ = m2.Data();
+
+            for (size_t i = 0; i < rows_; ++i)
+            {
+                for (size_t j = 0; j < cols_; ++j)
+                {
+                    (*this)(i, j) = m2(i, j);
+                }
+            }
 
             return *this;
         }
