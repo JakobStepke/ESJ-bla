@@ -72,8 +72,8 @@ PYBIND11_MODULE(bla, m)
               "return transpose of matrix")
          .def("T", &Matrix<double, ORDERING::RowMajor>::transpose,
               "return transpose of matrix")
-         .def("determinant", &Matrix<double, ORDERING::RowMajor>::Determinant, "return determinant of matrix")
-         .def("inverse", &Matrix<double, ORDERING::RowMajor>::Inverse, "return inverse of matrix")
+         //.def("determinant", &Matrix<double, ORDERING::RowMajor>::Determinant, "return determinant of matrix")
+         //.def("inverse", &Matrix<double, ORDERING::RowMajor>::Inverse, "return inverse of matrix")
 
          .def("__setitem__", [](Matrix<double, ORDERING::RowMajor> &self, std::tuple<int, int> ind, double v)
               {

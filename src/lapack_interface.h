@@ -102,9 +102,10 @@ namespace ASC_bla
   }
   
   template <ORDERING OA>
-  MatrixView<double, OA> InverseLapack (MatrixView<double, OA> a)
+  MatrixView<double, OA> InverseLapack (const MatrixView<double, OA> a)
   {
-    MatrixView<double, ORDERING::ColMajor> a_cm = a;
+    MatrixView<double, OA> a_cm = a;
+    a_cm.CopyToNew(a);
 
     int n = a_cm.Size_Cols();
     int lda = a_cm.Dist();

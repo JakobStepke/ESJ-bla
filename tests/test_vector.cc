@@ -2,6 +2,7 @@
 
 #include <vector.h>
 #include <matrix.h>
+#include <lapack_interface.h>
 
 namespace bla = ASC_bla;
 
@@ -12,6 +13,7 @@ int main()
 
   bla::Matrix<double, bla::ORDERING::ColMajor> A(n, n);
   bla::Matrix<double, bla::ORDERING::ColMajor> B(n, n);
+  bla::Matrix<double, bla::ORDERING::ColMajor> X(n, n);
 
   for (size_t i = 0; i < x.Size(); i++)
   {
@@ -27,19 +29,57 @@ int main()
     for (size_t j = 0; j < B.Size_Cols(); j++)
       B(i, j) = 2*i + j;
 
+  for (size_t i = 0; i < X.Size_Rows(); i++)
+    for (size_t j = 0; j < X.Size_Cols(); j++)
+      X(i, j) = i;
+
   bla::Vector<double> z = x + y;
 
   bla::Matrix<double, bla::ORDERING::ColMajor> C = A*B;
   bla::Matrix<double, bla::ORDERING::ColMajor> D = A*B + A*B;
-  bla::Matrix<double, bla::ORDERING::ColMajor> E = A.Inverse();
-  bla::Matrix<double, bla::ORDERING::ColMajor> I = A*E;
+  bla::Matrix<double, bla::ORDERING::ColMajor> E = B*A;
+
+  bla::Matrix<double, bla::ORDERING::ColMajor> Identity = bla::Matrix<double, bla::ORDERING::ColMajor>(n, n);
+  Identity.Diag() = 1;
+  //bla::Matrix<double, bla::ORDERING::ColMajor> E = InverseLapack(A);
+  //bla::Matrix<double, bla::ORDERING::ColMajor> I = A*E;
 
   std::cout << "A = " << A << std::endl;
   std::cout << "B = " << B << std::endl;
   std::cout << "C = " << C << std::endl;
   std::cout << "D = " << D << std::endl;
   std::cout << "E = " << E << std::endl;
-  std::cout << "I = " << I << std::endl;
+  std::cout << "I = " << Identity << std::endl;
+  
+  std::cout << "A*I = " << A*Identity << std::endl;
+  std::cout << "I*A = " << Identity*A << std::endl;
+  std::cout << "X = " << X << std::endl;
+  std::cout << "A*X = " << A*X << std::endl;
+  std::cout << "X*A = " << X*A << std::endl;
+
+  std::cout << "A = " << A << std::endl;
+  std::cout << "X = " << X << std::endl;
+
+  std::cout << "X.Row(0) = " << X.Row(0) << std::endl;
+  std::cout << "X.Row(1) = " << X.Row(1) << std::endl;
+  std::cout << "X.Row(2) = " << X.Row(2) << std::endl;
+  std::cout << "X.Row(3) = " << X.Row(3) << std::endl;
+  std::cout << "X.Row(4) = " << X.Row(4) << std::endl;
+
+  std::cout << "X.Col(0) = " << X.Col(0) << std::endl;
+  std::cout << "X.Col(1) = " << X.Col(1) << std::endl;
+  std::cout << "X.Col(2) = " << X.Col(2) << std::endl;
+  std::cout << "X.Col(3) = " << X.Col(3) << std::endl;
+  std::cout << "X.Col(4) = " << X.Col(4) << std::endl;
+  std::cout << "X.Row(4).Data() = " << X.Row(4).Data()[10] << std::endl;
+  std::cout << "X.Flatten() = " << X.Flatten() << std::endl;
+
+  size_t i = 1;
+  std::cout << "X.Row(i) = " << X.Row(i) << std::endl;
+  std::cout << "A.Col(i) = " << A.Col(i) << std::endl;
+
+  std::cout << "InnerProduct(X.Row(i), A.Col(i)) = " << ASC_bla::InnerProduct<8>((size_t)n, X.Row(i), A.Col(i)) << std::endl;
+
 
   std::cout << "A*x = " << A*x << std::endl;
   std::cout << "y*A = " << y*A << std::endl;
@@ -56,4 +96,28 @@ int main()
   x.Slice(1, 5) = 10;
 
   std::cout << "x = " << x << std::endl;
+
+  /*
+  fprime = 
+    0 -0.125664
+    0.125664 0
+  */
+
+  const size_t zero = 0;
+  const size_t one = 1;
+
+  auto fprime = bla::Matrix<double, bla::ORDERING::ColMajor>(2, 2);
+  fprime(zero, zero) = 3;
+  fprime(one, one) = 4;
+
+  std::cout << "fprime = " << fprime << std::endl;
+
+  auto fprimeInverse = bla::InverseLapack(fprime);
+
+  std::cout << "fprime = " << fprime << std::endl;
+  std::cout << "fprimeInverse = " << fprimeInverse << std::endl;
+
+  std::cout << "fprime*fprimeInverse = " << fprime*fprimeInverse << std::endl;
+
+
 }

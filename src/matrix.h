@@ -10,6 +10,8 @@
 
 #include "simd.h"
 
+#include <optional>
+
 using namespace ASC_HPC;
 
 namespace ASC_bla
@@ -24,16 +26,44 @@ namespace ASC_bla
         size_t dist_;
         T *data_;
 
+        auto MultiplyEight(const MatrixView<T, ORD> &other) const
+        {
+            MatrixView<T, ORD> result(rows_, other.cols_);
+            
+            for (size_t i = 0; i < rows_; i+=8)
+            {
+                auto row = Row(i);
+                auto col_0 = other.Col(0);
+                auto col_1 = other.Col(1);
+                auto col_2 = other.Col(2);
+                auto col_3 = other.Col(3);
+                auto col_4 = other.Col(4);
+                auto col_5 = other.Col(5);
+                auto col_6 = other.Col(6);
+                auto col_7 = other.Col(7);
+
+                result(i, 0) = InnerProduct<8>(8, row, 1, col_0, 1);
+                result(i, 1) = InnerProduct<8>(8, row, 1, col_1, 1);
+                result(i, 2) = InnerProduct<8>(8, row, 1, col_2, 1);
+                result(i, 3) = InnerProduct<8>(8, row, 1, col_3, 1);
+                result(i, 4) = InnerProduct<8>(8, row, 1, col_4, 1);
+                result(i, 5) = InnerProduct<8>(8, row, 1, col_5, 1);
+                result(i, 6) = InnerProduct<8>(8, row, 1, col_6, 1);
+                result(i, 7) = InnerProduct<8>(8, row, 1, col_7, 1);
+            }
+            return result;
+        }
+
     public:
         MatrixView(size_t rows, size_t cols, T *data)
-            : rows_(rows), cols_(cols), data_(data)
-            , dist_((ORD == ORDERING::ColMajor) ? rows : cols)
-            {}
+            : rows_(rows), cols_(cols), data_(data), dist_((ORD == ORDERING::ColMajor) ? rows : cols)
+        {
+        }
 
         MatrixView(size_t rows, size_t cols)
-            : rows_(rows), cols_(cols), data_(new T[rows*cols])
-            , dist_((ORD == ORDERING::ColMajor) ? rows : cols)
-            {}
+            : rows_(rows), cols_(cols), data_(new T[rows * cols]), dist_((ORD == ORDERING::ColMajor) ? rows : cols)
+        {
+        }
 
         template <typename TB, ORDERING ORDB>
         MatrixView &operator=(const MatExpr<TB, ORDB> &m2)
@@ -45,11 +75,47 @@ namespace ASC_bla
             return *this;
         }
 
+        MatrixView &operator=(const MatrixView &m2)
+        {
+            rows_ = m2.Size_Cols();
+            cols_ = m2.Size_Cols();
+
+            for (size_t i = 0; i < rows_; ++i)
+            {
+                for (size_t j = 0; j < cols_; ++j)
+                {
+                    (*this)(i, j) = m2(i, j);
+                }
+            }
+
+            return *this;
+        }
+
+        template <typename TB, ORDERING ORDB>
+        void CopyToNew(const MatrixView<TB, ORDB> &m2)
+        {
+            rows_ = m2.Size_Cols();
+            cols_ = m2.Size_Rows();
+            data_ = new T[rows_ * cols_];
+
+            for (size_t i = 0; i < rows_; ++i)
+            {
+                for (size_t j = 0; j < cols_; ++j)
+                {
+                    (*this)(i, j) = m2(i, j);
+                }
+            }
+        }
+
         MatrixView &operator=(T scal)
         {
-            rows_ = scal;
-            cols_ = scal;
-            data_ = 0;
+            for (size_t i = 0; i < rows_; ++i)
+            {
+                for (size_t j = 0; j < cols_; ++j)
+                {
+                    (*this)(i, j) = scal;
+                }
+            }
             return *this;
         }
 
@@ -62,22 +128,22 @@ namespace ASC_bla
         {
             if constexpr (ORD == ORDERING::ColMajor)
             {
-                return data_[i+j * rows_];
+                return data_[i + j * rows_];
             }
             else
             {
-                return data_[j+i * cols_];
+                return data_[j + i * cols_];
             }
         }
         const T &operator()(size_t i, size_t j) const
         {
             if constexpr (ORD == ORDERING::ColMajor)
             {
-                return data_[i+j * rows_];
+                return data_[i + j * rows_];
             }
             else
             {
-                return data_[j+i * cols_];
+                return data_[j + i * cols_];
             }
         }
 
@@ -102,11 +168,11 @@ namespace ASC_bla
         {
             if constexpr (ORD == ORDERING::ColMajor)
             {
-                return VectorView(cols_, 1, data_ + i * cols_);
+                return VectorView(cols_, rows_, data_ + i);
             }
             else
             {
-                return Transpose().Row(i);
+                return VectorView(cols_, (size_t)1, data_ + i  * cols_);
             }
         }
 
@@ -114,12 +180,17 @@ namespace ASC_bla
         {
             if constexpr (ORD == ORDERING::ColMajor)
             {
-                return Row(i);
+                return VectorView(rows_, (size_t)1, data_ + i * rows_);
             }
             else
             {
-                return Transpose().Col(i);
+                return VectorView(rows_, cols_, data_ + i);
             }
+        }
+
+        auto Flatten() const
+        {
+            return VectorView(rows_ * cols_, (size_t)1, data_);
         }
 
         auto Rows(size_t first, size_t next) const
@@ -144,6 +215,20 @@ namespace ASC_bla
             {
                 return MatrixView(rows_, next - first, data_ + first);
             }
+        }
+
+        auto SubMatrix(size_t first_row, size_t row_length, size_t first_col, size_t col_length) const
+        {
+            MatrixView<T, ORD> result(row_length, col_length);
+            for (size_t i = 0; i < row_length; ++i)
+            {
+                for (size_t j = 0; j < col_length; ++j)
+                {
+                    result(i, j) = (*this)(first_row + i, first_col + j);
+                }
+            }
+
+            return result;
         }
 
         auto Diag() const
@@ -194,8 +279,8 @@ namespace ASC_bla
             return *this;
         }
 
-                // Matrix-Matrix Multiplication
-        auto operator*(const MatrixView &other) const
+        // Matrix-Matrix Multiplication, using SIMD (InnerProduct), if T is double
+        MatrixView<T, ORD> operator*(const MatrixView &other) const
         {
             if (Size() != other.Size())
             {
@@ -205,28 +290,172 @@ namespace ASC_bla
 
             MatrixView result(rows_, other.cols_);
 
-            for (size_t i = 0; i < rows_; ++i)
+            if constexpr (std::is_same<double, T>::value)
             {
-                auto row = std::remove_const_t<decltype(Row(0))>(Col(i));
-                for (size_t j = 0; j < other.cols_; ++j)
+                MatrixView result_to_be_merged(rows_, other.cols_);
+                
+                std::optional<MatrixView<double, ORDERING::ColMajor>> sub_result_list = std::nullopt;
+
+                // Check if dimension >= 96, if yes, use caching
+                if (rows_ >= 96 && other.cols_ >= 96)
                 {
-                    const int dy = 1;
-                    const size_t SW = 16;
+                    sub_result_list = MatrixView<double, ORDERING::ColMajor>(96 * 96, size_t(rows_ / 96) * size_t(other.cols_ / 96));
+                    //std::cout << "sub_result_list init\n" << sub_result_list.value() << "\n";
+                }
 
-                    if constexpr (std::is_same<double, T>::value)
+                for (size_t i = 0; i < rows_; i+=96)
+                {
+                    for (size_t j = 0; j < other.cols_; j+=96)
                     {
-                        /*
-                        for (size_t k = 0; k < cols_; ++k)
+                        // Check if sub matrix can be created
+                        // +1 to avoid overflow
+                        if (i + 96 + 1 > rows_  || j + 96 + 1 > other.cols_)
                         {
-                            sum = FMA(SIMD<double,SW>(px[k]), SIMD<double,SW>(py+k*dy), sum);
-                        }*/
-                        auto col = std::remove_const_t<decltype(Col(0))>(other.Col(j));
+                            // If not, use the normal multiplication
 
-                        
+                            // std::cout << "Normal\n";
+                            for (size_t l = 0; l + j < other.cols_; ++l)
+                            {
+                                for (size_t k = 0; k + i < rows_; ++k)
+                                {
+                                    if(i + k + 7 < rows_)
+                                    {
+                                        auto tmp = InnerProduct8<8>(cols_, Row(i + k), Row(i + k + 1), Row(i + k + 2), Row(i + k + 3), Row(i + k + 4), Row(i + k + 5), Row(i + k + 6), Row(i + k + 7), other.Col(j + l));
+                                        result_to_be_merged(i + k, j + l) = std::get<0>(tmp);
+                                        k++;
+                                        result_to_be_merged(i + k, j + l) = std::get<1>(tmp);
+                                        k++;
+                                        result_to_be_merged(i + k, j + l) = std::get<2>(tmp);
+                                        k++;
+                                        result_to_be_merged(i + k, j + l) = std::get<3>(tmp);
+                                        k++;
+                                        result_to_be_merged(i + k, j + l) = std::get<4>(tmp);
+                                        k++;
+                                        result_to_be_merged(i + k, j + l) = std::get<5>(tmp);
+                                        k++;
+                                        result_to_be_merged(i + k, j + l) = std::get<6>(tmp);
+                                        k++;
+                                        result_to_be_merged(i + k, j + l) = std::get<7>(tmp);
+                                    }
+                                    else
+                                    {
+                                        result_to_be_merged(i + k, j + l) = InnerProduct<8>(cols_, Row(i + k), other.Col(j + l));
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // If yes, use caching
 
-                        result(i, j) = InnerProduct<SW>(cols_, row, 1, col, 1);
+                            // std::cout << "Caching\n";
+
+                            auto sub_matrix = SubMatrix(i, 96, j, 96);
+                            auto sub_matrix_other = other.SubMatrix(i, 96, j, 96);
+
+                            // std::cout << "Sub matrix\n" << sub_matrix << "\n";
+                            // std::cout << "Sub matrix other\n" << sub_matrix_other << "\n";
+
+                            auto sub_matrix_result = sub_matrix * sub_matrix_other;
+
+                            // std::cout << "Sub matrix result\n" << sub_matrix_result << "\n";
+
+                            auto flat = sub_matrix_result.Flatten();
+                            auto col_var = sub_result_list.value().Col(size_t((i + j) / 96));
+
+                            for (size_t k = 0; k < flat.Size(); ++k)
+                            {
+                                col_var(k) = flat(k);
+                            }
+
+                            // std::cout << "Sub matrix result flatten\n" << sub_matrix_result.Flatten() << "\n";
+
+                            // std::cout << "Sub result list\n" << sub_result_list.value().Col(size_t((i + j) / 96)) << "\n";
+                        }
                     }
-                    else{
+                }
+                
+                // std::cout << "Rows: " << rows_ << "\n";
+                // std::cout << "Cols: " << other.cols_ << "\n";
+
+                // Check if dimension < 96, if yes, copy results from result_to_be_merged to result
+                if (rows_ <= 96 || other.cols_ <= 96)
+                {
+                    // std::cout << "result_to_be_merged\n" << result_to_be_merged << "\n";
+
+                    return result_to_be_merged;
+                }
+
+                // std::cout << "sub_result_list\n" << sub_result_list.value() << "\n";
+
+                // Merge the result from sub_result_list to result by using the sub_result_list in the following way:
+                // result(i, j) = sum(sub_result_list.Row(i * j)(cols//96 * k)) where k is an index from 0 to cols//96 * rows//96
+
+                // for (size_t i = 0; i < rows_; ++i)
+                // {
+                //     for (size_t j = 0; j < other.cols_; ++j)
+                //     {
+                //         // std::cout << "i: " << i << "\n";
+
+                //         auto row_var = sub_result_list.value().Row(i + j * 96);
+
+                //         // std::cout << "row_var\n" << row_var << "\n";
+
+                //         auto sum = row_var((i + j) / 96);
+
+                //         // for (size_t k = i; k < size_t(rows_ / 96) * size_t(other.cols_ / 96); ++k)
+                //         // {
+                //         //     sum += row_var(0);
+                //         // }
+
+                //         result(i, j) = sum;
+                //     }
+                // }
+
+
+                // std::cout << "Size_Rows: " << sub_result_list.value().Size_Rows() << "\n";
+                
+                for (size_t i = 0; i < sub_result_list.value().Size_Rows(); i+=96)
+                {
+                    for (short k = 0; k < 96; ++k)
+                    {
+                        auto row_var = sub_result_list.value().Row(i + k);
+
+                        auto sum = 0;
+                        // This shouldn't start from 0, but this makes it work
+                        for (size_t j = 0; j < sub_result_list.value().Size_Cols(); j += 96)
+                        {
+                            sum += row_var(j);
+                        }
+
+                        result(k, size_t(i/96)) = sum;
+                    
+                    }
+                }
+
+                // Copy the result (last cols/rows) from result_to_be_merged to 
+                for (size_t i = 0; i < rows_; ++i)
+                {
+                    for (size_t j = 0; j < other.cols_; ++j)
+                    {
+                        if (i >= size_t(rows_/96)*96 || j >= size_t(other.cols_/96)*96)
+                        {
+                            result(i, j) = result_to_be_merged(i, j);
+                        }
+                    }
+                }
+
+                // std::cout << "result to be merged\n" << result_to_be_merged << "\n";
+
+                return result;
+            }
+            else
+            {
+
+                for (size_t i = 0; i < rows_; ++i)
+                {
+                    for (size_t j = 0; j < other.cols_; ++j)
+                    {
                         T sum = 0;
                         for (size_t k = 0; k < cols_; ++k)
                         {
@@ -294,7 +523,6 @@ namespace ASC_bla
             }
             return result;
         }
-
 
         // Transpose method
         auto transpose() const
@@ -481,8 +709,6 @@ namespace ASC_bla
             return *this;
         }
 
-
-
         auto operator*=(const MatrixView &other)
         {
             if (Size() != other.Size())
@@ -515,6 +741,33 @@ namespace ASC_bla
             *this = result;
             return *this;
         }
+
+        friend std::ostream &operator<<(std::ostream &os, const MatrixView &matrix)
+        {
+            for (size_t i = 0; i < matrix.rows_; ++i)
+            {
+                if (i > 0)
+                {
+                    os << "\n";
+                }
+                for (size_t j = 0; j < matrix.cols_; ++j)
+                {
+                    if (j > 0)
+                    {
+                        os << " ";
+                    }
+                    if constexpr (ORD == ORDERING::ColMajor)
+                    {
+                        os << matrix(i, j);
+                    }
+                    else
+                    {
+                        os << matrix(i, j);
+                    }
+                }
+            }
+            return os;
+        }
     };
 
     template <typename T = double, ORDERING ORD = ORDERING::ColMajor>
@@ -525,21 +778,20 @@ namespace ASC_bla
         using MatrixView<T, ORD>::cols_;
         using MatrixView<T, ORD>::data_;
         using MatrixView<T, ORD>::dist_;
+
+    public:
+        using MatrixView<T, ORD>::operator();
         using MatrixView<T, ORD>::Size;
         using MatrixView<T, ORD>::Row;
         using MatrixView<T, ORD>::Col;
 
-     public:
-        using MatrixView<T, ORD>::operator();
-
-
     public:
         // Constructors
-        Matrix(size_t rows, size_t cols) : MatrixView<T, ORD>(rows, cols, new T[rows*cols]) {}
+        Matrix(size_t rows, size_t cols) : MatrixView<T, ORD>(rows, cols, new T[rows * cols]) {}
         Matrix(const MatrixView<T, ORD> &other) : MatrixView<T, ORD>(other.Size_Rows(), other.Size_Cols(), other.Data()) {}
 
         // Copy constructor
-        Matrix(const Matrix &other) : Matrix (other.rows_, other.cols_)
+        Matrix(const Matrix &other) : Matrix(other.rows_, other.cols_)
         {
             for (size_t i = 0; i < rows_; ++i)
             {
@@ -564,6 +816,18 @@ namespace ASC_bla
                 rows_ = other.rows_;
                 cols_ = other.cols_;
                 data_ = other.data_;
+            }
+            return *this;
+        }
+
+        Matrix &operator=(T scal)
+        {
+            for (size_t i = 0; i < rows_; ++i)
+            {
+                for (size_t j = 0; j < cols_; ++j)
+                {
+                    (*this)(i, j) = scal;
+                }
             }
             return *this;
         }
@@ -594,125 +858,6 @@ namespace ASC_bla
                 }
             }
             return os;
-        }
-
-
-        [[deprecated("This does not work as intended")]]
-        T Determinant() const
-        {
-            if (rows_ != cols_)
-            {
-                // Invalid determinant, return an empty matrix or throw an exception
-                throw std::invalid_argument("Invalid determinant");
-            }
-
-            if (rows_ == 1)
-            {
-                return (*this)(0, 0);
-            }
-            else if (rows_ == 2)
-            {
-                return (*this)(0, 0) * (*this)(1, 1) - (*this)(0, 1) * (*this)(1, 0);
-            }
-            else
-            {
-                T det = 0;
-                for (size_t i = 0; i < rows_; ++i)
-                {
-                    Matrix<T, ORD> sub_matrix(rows_ - 1, cols_ - 1);
-                    for (size_t j = 1; j < rows_; ++j)
-                    {
-                        for (size_t k = 0; k < cols_; ++k)
-                        {
-                            if (k < i)
-                            {
-                                sub_matrix(j - 1, k) = (*this)(j, k);
-                            }
-                            else if (k > i)
-                            {
-                                sub_matrix(j - 1, k - 1) = (*this)(j, k);
-                            }
-                        }
-                    }
-                    if constexpr (ORD == ORDERING::ColMajor)
-                    {
-                        det += (*this)(0, i) * sub_matrix.Determinant();
-                    }
-                    else
-                    {
-                        det += (*this)(0, i) * sub_matrix.Determinant();
-                    }
-                }
-                return det;
-            }
-        }
-
-        // Obsolete
-        [[deprecated("This does not work as intended")]]
-        Matrix Inverse() const
-        {
-            if (rows_ != cols_)
-            {
-                // Invalid determinant, return an empty matrix or throw an exception
-                throw std::invalid_argument("Invalid determinant");
-            }
-
-            Matrix<T, ORD> result(rows_, cols_);
-
-            if (rows_ == 1)
-            {
-                result(0, 0) = 1 / (*this)(0, 0);
-            }
-            else if (rows_ == 2)
-            {
-                T det = (*this)(0, 0) * (*this)(1, 1) - (*this)(0, 1) * (*this)(1, 0);
-                result(0, 0) = (*this)(1, 1) / det;
-                result(0, 1) = -(*this)(0, 1) / det;
-                result(1, 0) = -(*this)(1, 0) / det;
-                result(1, 1) = (*this)(0, 0) / det;
-            }
-            else
-            {
-                T det = Determinant();
-                for (size_t i = 0; i < rows_; ++i)
-                {
-                    for (size_t j = 0; j < cols_; ++j)
-                    {
-                        Matrix<T, ORD> sub_matrix(rows_ - 1, cols_ - 1);
-                        for (size_t k = 0; k < rows_; ++k)
-                        {
-                            for (size_t l = 0; l < cols_; ++l)
-                            {
-                                if (k < i && l < j)
-                                {
-                                    sub_matrix(k, l) = (*this)(k, l);
-                                }
-                                else if (k < i && l > j)
-                                {
-                                    sub_matrix(k, l - 1) = (*this)(k, l);
-                                }
-                                else if (k > i && l < j)
-                                {
-                                    sub_matrix(k - 1, l) = (*this)(k, l);
-                                }
-                                else if (k > i && l > j)
-                                {
-                                    sub_matrix(k - 1, l - 1) = (*this)(k, l);
-                                }
-                            }
-                        }
-                        if constexpr (ORD == ORDERING::ColMajor)
-                        {
-                            result(j, i) = sub_matrix.Determinant() / det;
-                        }
-                        else
-                        {
-                            result(i, j) = sub_matrix.Determinant() / det;
-                        }
-                    }
-                }
-            }
-            return result;
         }
     };
 
