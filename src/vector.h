@@ -68,14 +68,16 @@ namespace ASC_bla
       return *this;
     }
 
-    VectorView &operator+=(const VectorView &v2)
+    template <typename TB>
+    VectorView &operator+=(const VecExpr<TB> &v2)
     {
       for (size_t i = 0; i < size_; i++)
         data_[dist_ * i] += v2(i);
       return *this;
     }
 
-    VectorView &operator-=(const VectorView &v2)
+    template <typename TB>
+    VectorView &operator-=(const VecExpr<TB> &v2)
     {
       for (size_t i = 0; i < size_; i++)
         data_[dist_ * i] -= v2(i);
@@ -124,8 +126,12 @@ namespace ASC_bla
 
     auto AsMatrix(size_t rows, size_t cols) const
     {
-      static_assert(std::is_same<TDIST, std::integral_constant<size_t,1> >::value == true, "gapped vectors cannot be converted to matrices");
-      return MatrixView<T, ORDERING::ColMajor>(rows, cols, data_);
+      static_assert(std::is_same<TDIST, std::integral_constant<size_t, 1>>::value == true, "gapped vectors cannot be converted to matrices");
+      
+      
+      auto mat = MatrixView<T>(rows, cols, data_);
+      std::cout << "mat = " << mat << std::endl;
+      return mat;
     }
   };
 
@@ -285,21 +291,135 @@ namespace ASC_bla
                       sum4.GetFirst(), sum5.GetFirst(), sum6.GetFirst(), sum7.GetFirst());
   }
 
-  template<size_t S, typename T = double>
-    class Vec : public VecExpr<Vec<S,T>> {
-        T data[S];
-    public:
-        T & operator()(size_t row) {
-            return data[row];
-        }
+  template <size_t S, typename T = double>
+  class Vec : public VecExpr<Vec<S, T>>
+  {
+    T data[S];
 
-        const T & operator()(size_t row) const {
-            return data[row];
-        }
+  public:
+    Vec() {}
 
-        size_t Size() const { return S; }
+    Vec(const Vec<S, T> &v2)
+    {
+      for (int i = 0; i < S; i++)
+      {
+        data[i] = v2(i);
+      }
+    }
+
+    Vec(T all)
+    {
+      for (size_t i = 0; i < S; i++)
+      {
+        data[i] = all;
+      }
     };
 
+    // initializer list constructor
+    Vec(std::initializer_list<T> list)
+    {
+      if (list.size() != S)
+        throw std::invalid_argument("initializer list with wrong size");
+      // copy list
+      for (size_t i = 0; i < S; i++)
+      {
+        data[i] = list.begin()[i];
+      }
+    }
+
+    // constructor from VectorView
+    template <typename T2, typename TDIST>
+    Vec(VectorView<T2, TDIST> v2)
+    {
+      if (v2.Size() != S)
+        throw std::invalid_argument("VectorView has wrong size");
+      // copy list
+      for (size_t i = 0; i < S; i++)
+      {
+        data[i] = v2(i);
+      }
+    }
+
+    // constructor from VecExpr
+    template <typename T2>
+    Vec(const VecExpr<T2> &v2)
+    {
+      if (v2.Size() != S)
+        throw std::invalid_argument("VecExpr has wrong size");
+
+      for (int i = 0; i < S; i++)
+      {
+        data[i] = v2(i);
+      }
+    }
+
+    // VectorView operator=
+    template <typename T2, typename TDIST>
+    Vec &operator=(VectorView<T2, TDIST> v2)
+    {
+      if (v2.Size() != S)
+        throw std::invalid_argument("VectorView has wrong size");
+
+        std::cout << "Using this operator=" << std::endl;
+      // copy list
+      for (size_t i = 0; i < S; i++)
+      {
+        std::cout << "v2(i) = " << v2(i) << std::endl;
+        data[i] = v2(i);
+        std::cout << "data[i] = " << data[i] << std::endl;
+      }
+      return *this;
+    }
+
+    Vec &operator=(const Vec<S, T> &v2)
+    {
+      std::cout << "Using the other operator=" << std::endl;
+      for (int i = 0; i < S; i++)
+      {
+        data[i] = v2(i);
+      }
+      return *this;
+    }
+
+    template <typename T2>
+    Vec &operator=(const VecExpr<T2> &v2)
+    {
+      std::cout << "Using the other other operator=" << std::endl;
+      if (v2.Size() != S)
+        throw std::invalid_argument("VecExpr has wrong size");
+
+      for (int i = 0; i < S; i++)
+      {
+        data[i] = v2(i);
+      }
+      return *this;
+    }
+
+    T operator()(size_t i) const
+    {
+      // std::cout << "Vec::operator()(" << i << ")" << std::endl;
+      // std::cout << "data[i] = " << data[i] << std::endl;
+      return data[i];
+    }
+
+    T &operator()(size_t i)
+    {
+      return data[i];
+    }
+
+    size_t Size() const { return S; }
+
+    auto CopyToVectorView()
+    {
+      auto copyData = new T[S];
+      for (size_t i = 0; i < S; i++)
+      {
+        std::cout << "data[i] = " << data[i] << std::endl;
+        copyData[i] = data[i];
+      }
+      return VectorView<T>(S, copyData);
+    }
+  };
 }
 
 #endif
