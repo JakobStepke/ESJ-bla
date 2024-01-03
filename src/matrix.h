@@ -81,7 +81,7 @@ namespace ASC_bla
             rows_ = m2.Size_Cols();
             cols_ = m2.Size_Cols();
 
-            std::cout << "Copy\n";
+            // std::cout << "Copy\n";
 
             for (size_t i = 0; i < rows_; ++i)
             {

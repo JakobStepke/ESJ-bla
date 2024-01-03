@@ -130,7 +130,7 @@ namespace ASC_bla
       
       
       auto mat = MatrixView<T>(rows, cols, data_);
-      std::cout << "mat = " << mat << std::endl;
+      // std::cout << "mat = " << mat << std::endl;
       return mat;
     }
   };
@@ -246,10 +246,10 @@ namespace ASC_bla
     double sum = 0.0;
     for (size_t i = 0; i < n; i++)
     {
-      std::cout << "x(i) = " << x(i) << std::endl;
-      std::cout << "y(i) = " << y(i) << std::endl;
-      std::cout << "x(i)*y(i) = " << x(i) * y(i) << std::endl;
-      std::cout << "sum = " << sum << std::endl;
+      // std::cout << "x(i) = " << x(i) << std::endl;
+      // std::cout << "y(i) = " << y(i) << std::endl;
+      // std::cout << "x(i)*y(i) = " << x(i) * y(i) << std::endl;
+      // std::cout << "sum = " << sum << std::endl;
       sum += x(i) * y(i);
     }
     return sum;
@@ -360,20 +360,20 @@ namespace ASC_bla
       if (v2.Size() != S)
         throw std::invalid_argument("VectorView has wrong size");
 
-        std::cout << "Using this operator=" << std::endl;
+        // std::cout << "Using this operator=" << std::endl;
       // copy list
       for (size_t i = 0; i < S; i++)
       {
-        std::cout << "v2(i) = " << v2(i) << std::endl;
+        // std::cout << "v2(i) = " << v2(i) << std::endl;
         data[i] = v2(i);
-        std::cout << "data[i] = " << data[i] << std::endl;
+        // std::cout << "data[i] = " << data[i] << std::endl;
       }
       return *this;
     }
 
     Vec &operator=(const Vec<S, T> &v2)
     {
-      std::cout << "Using the other operator=" << std::endl;
+      // std::cout << "Using the other operator=" << std::endl;
       for (int i = 0; i < S; i++)
       {
         data[i] = v2(i);
@@ -384,7 +384,7 @@ namespace ASC_bla
     template <typename T2>
     Vec &operator=(const VecExpr<T2> &v2)
     {
-      std::cout << "Using the other other operator=" << std::endl;
+      // std::cout << "Using the other other operator=" << std::endl;
       if (v2.Size() != S)
         throw std::invalid_argument("VecExpr has wrong size");
 
@@ -414,7 +414,7 @@ namespace ASC_bla
       auto copyData = new T[S];
       for (size_t i = 0; i < S; i++)
       {
-        std::cout << "data[i] = " << data[i] << std::endl;
+        // std::cout << "data[i] = " << data[i] << std::endl;
         copyData[i] = data[i];
       }
       return VectorView<T>(S, copyData);

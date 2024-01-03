@@ -13,6 +13,10 @@ namespace ASC_bla
     auto Upcast() const { return static_cast<const T&> (*this); }
     size_t Size() const { return Upcast().Size(); }
     auto operator() (size_t i) const { return Upcast()(i); }
+
+    // protected:
+    // VecExpr() = default;
+    // VecExpr(const VecExpr &) = default;
   };
 
   template <typename T, ORDERING ORD>
@@ -152,7 +156,8 @@ namespace ASC_bla
   }
 
   template <typename T1, typename T2>
-  auto operator* (VecExpr<T1> v1, VecExpr<T2> v2){
+  auto operator* (const VecExpr<T1> & v1, const VecExpr<T2> & v2)
+  {
     // error handling
     if (v1.Size() != v2.Size()){
       throw std::invalid_argument("vectors need to have same length for scalar product");
@@ -160,14 +165,14 @@ namespace ASC_bla
 
     decltype(v1(0)*v2(0)) product = 0;
 
-    std::cout << "v1.Size() = " << v1.Size() << std::endl;
-    std::cout << "v2.Size() = " << v2.Size() << std::endl;
-    std::cout << "v1 = " << v1 << std::endl;
-    std::cout << "v2 = " << v2 << std::endl;
+    // std::cout << "v1.Size() = " << v1.Size() << std::endl;
+    // std::cout << "v2.Size() = " << v2.Size() << std::endl;
+    // std::cout << "v1 = " << v1 << std::endl;
+    // std::cout << "v2 = " << v2 << std::endl;
 
     for (size_t i = 0; i < v1.Size(); i++){
-      std::cout << "v1(i) = " << v1(i) << std::endl;
-      std::cout << "v2(i) = " << v2(i) << std::endl;
+      // std::cout << "v1(i) = " << v1(i) << std::endl;
+      // std::cout << "v2(i) = " << v2(i) << std::endl;
       product += v1(i)*v2(i);
     }
 
@@ -176,8 +181,8 @@ namespace ASC_bla
 
   // 2-norm for vectors
   template <typename T>
-  auto L2Norm (VecExpr<T> v){
-    std::cout << "v: " << v << std::endl;
+  auto L2Norm (const VecExpr<T> & v){
+    // std::cout << "v: " << v << std::endl;
     auto ret = std::sqrt(v*v);
     return ret;
   }
