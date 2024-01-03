@@ -2,7 +2,7 @@
 #define FILE_EXPRESSION_H
 
 #include <ostream>
-#include "ordering.h"
+#include "forward_decl.h"
 namespace ASC_bla
 {
 
@@ -106,6 +106,12 @@ namespace ASC_bla
     return SumVecExpr(a.Upcast(), b.Upcast());
   }
 
+  template <typename TA, typename TB>
+  auto operator- (const VecExpr<TA> & a, const VecExpr<TB> & b)
+  {
+    return SumVecExpr(a.Upcast(), -b.Upcast());
+  }
+
 
 
   
@@ -125,6 +131,18 @@ namespace ASC_bla
   auto operator* (double scal, const VecExpr<T> & v)
   {
     return ScaleVecExpr(scal, v.Upcast());
+  }
+
+  template <typename T>
+  auto operator* (const VecExpr<T> & v, double scal)
+  {
+    return ScaleVecExpr(scal, v.Upcast());
+  }
+
+  template <typename T>
+  auto operator- (const VecExpr<T> & v)
+  {
+    return ScaleVecExpr(-1.0, v.Upcast());
   }
 
 

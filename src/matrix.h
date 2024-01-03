@@ -3,10 +3,11 @@
 
 #include <iostream>
 
+#include "forward_decl.h"
+
 #include "expression.h"
 
 #include "vector.h"
-#include "ordering.h"
 
 #include "simd.h"
 
@@ -17,7 +18,7 @@ using namespace ASC_HPC;
 namespace ASC_bla
 {
 
-    template <typename T = double, ORDERING ORD = ORDERING::ColMajor>
+    template <typename T, ORDERING ORD>
     class MatrixView : public MatExpr<MatrixView<T, ORD>, ORD>
     {
     protected:
