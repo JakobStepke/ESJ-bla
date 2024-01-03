@@ -1,8 +1,8 @@
 #include <sstream>
 #include <pybind11/pybind11.h>
 
+#include "forward_decl.h"
 #include "vector.h"
-#include "ordering.h"
 #include "matrix.h"
 
 using namespace ASC_bla;
@@ -60,6 +60,17 @@ PYBIND11_MODULE(bla, m)
                   std::memcpy(&v(0), PYBIND11_BYTES_AS_STRING(mem.ptr()), v.Size() * sizeof(double));
                   return v;
              }));
+
+             py::class_<Vec<3, double>>(m, "Vec3")
+             .def(py::init<>())
+                .def("___setitem__", [](Vec<3, double> &self, int i, double v)
+                {
+                    if (i < 0) i += self.Size();
+                    if (i < 0 || i >= self.Size()) throw py::index_error("vector index out of range");
+                    self(i) = v; })
+                    .def("__getitem__", [](Vec<3, double> &self, int i)
+                    { return self(i); });
+
 
      py::class_<Matrix<double, ORDERING::RowMajor>>(m, "Matrix")
          .def(py::init<size_t, size_t>(),
